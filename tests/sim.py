@@ -39,7 +39,8 @@ class FakeTreadmill:
                  incline_range=(0, 150, 5), needs_ftms_start=False, status_on_target=True,
                  indications=True, split_packets=False, has_distance=True, chars=None,
                  control_allowed=True, accel=1.5, incline_rate=0.6, incline_step=0.0,
-                 refuse_speed=False, discovery_delay=0, safety_instant=True):
+                 refuse_speed=False, discovery_delay=0, safety_instant=True,
+                 advert="uuids", ftms=True):
         self.name = name
         self.rssi = rssi
         self.target_bits = target_bits
@@ -58,6 +59,8 @@ class FakeTreadmill:
         self.discovery_delay = discovery_delay  # ms after connecting before characteristics appear
         self.safety_instant = safety_instant    # False: belt coasts down after the key is pulled
         self.connected_at = 0
+        self.advert = advert                # how 0x1826 shows up: uuids / servicedata / raw / none
+        self.ftms = ftms                    # False: some other Bluetooth device (no FTMS service)
         self.chars = chars or ["2acc", "2acd", "2ad4", "2ad5", "2ad9", "2ada"]
         self.connected = False
         self.notify = set()
@@ -213,7 +216,15 @@ class ScanResult:
         self.machine = machine
         self.name = machine.name
         self.rssi = machine.rssi
-        self.serviceUuids = ["1826"]
+        adv = machine.advert if machine.ftms else "none"
+        # what the watch firmware reports; "raw" = only visible in the raw advertising bytes
+        self.serviceUuids = ["1826"] if adv == "uuids" else []
+        self.serviceData = {"1826": bytes([0x01, 0x01, 0x00])} if adv == "servicedata" else {}
+        flags = bytes([0x02, 0x01, 0x06])
+        if adv in ("uuids", "raw"):
+            self.rawData = flags + bytes([0x03, 0x03, 0x26, 0x18]) + bytes([0x06, 0x16, 0x26, 0x18, 0x01, 0x01, 0x00])
+        else:
+            self.rawData = flags
 
     def isSameDevice(self, other):
         return other.machine is self.machine
@@ -294,7 +305,7 @@ class FakeDevice:
         return self.machine.connected
 
     def getService(self, uuid):
-        if self.machine.connected and uuid == "1826":
+        if self.machine.connected and uuid == "1826" and self.machine.ftms:
             return FakeService(self)
         return None
 

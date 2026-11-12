@@ -54,7 +54,12 @@ class FtmsManager extends Ble.BleDelegate {
     hidden var linkSince = 0;
     hidden var scanStart = 0;
     hidden var scanning = false;
-    hidden var candidates = [];  // [scanResult, rssi, name]
+    hidden var candidates = [];  // [scanResult, rssi, name, proven]: proven = advertises FTMS (or name filter)
+    hidden var seen = [];        // every advertiser heard, for the diagnostic line: [scanResult, rssi, name, ms]
+    hidden var excluded = [];    // name guesses we connected to that turned out not to have FTMS
+    hidden var target = null;    // scan result of the device being connected
+    hidden var targetProven = false;
+    hidden var searchSince = 0;  // when the current search began (periodic scan restarts don't reset it)
 
     hidden var queue = [];       // [type, uuid, payload, tries]
     hidden var busy = false;
@@ -166,7 +171,11 @@ class FtmsManager extends Ble.BleDelegate {
         if (link == LINK_REGISTERING) { return "Starting BLE"; }
         if (link == LINK_ERROR) { return problem; }
         if (link == LINK_SCANNING) {
-            if (candidates.size() == 0) { return "Searching..."; }
+            if (candidates.size() == 0) {
+                if (Sys.getTimer() - searchSince < 10000) { return "Searching..."; }
+                var n = recentSeen().size();
+                return (n == 0) ? "No BLE devices" : "No FTMS (" + n + " seen)";
+            }
             if (problem.length() > 0) { return problem; }
             return "Found " + candidates.size();
         }
@@ -267,6 +276,9 @@ class FtmsManager extends Ble.BleDelegate {
     }
 
     hidden function startScan() {
+        if (link != LINK_SCANNING) {
+            searchSince = Sys.getTimer();
+        }
         candidates = [];
         scanStart = Sys.getTimer();
         device = null;
@@ -286,32 +298,144 @@ class FtmsManager extends Ble.BleDelegate {
         }
     }
 
+    // FTMS treadmills put 0x1826 in their advertising. Some watch firmware does not report it
+    // through getServiceUuids(), so the service data and the raw advertising bytes are checked too.
     hidden function advertisesFtms(r) {
-        var it = r.getServiceUuids();
-        if (it == null) {
+        try {
+            var it = r.getServiceUuids();
+            if (it != null) {
+                for (var u = it.next(); u != null; u = it.next()) {
+                    if (u.equals(svcUuid)) {
+                        return true;
+                    }
+                }
+            }
+            var sd = r.getServiceData(svcUuid);
+            if (sd != null && sd.size() > 0) {
+                return true;
+            }
+            return Ftms.rawHasFtms(r.getRawData());
+        } catch (e) {
             return false;
         }
-        for (var u = it.next(); u != null; u = it.next()) {
-            if (u.equals(svcUuid)) {
+    }
+
+    // Name hints for treadmills whose advertising doesn't show FTMS at all. Such a device is
+    // only tried when nothing advertises FTMS, and dropped if it turns out to have no FTMS.
+    // Matrix commercial consoles advertise their serial number, which starts with "CTM".
+    hidden function looksLikeTreadmill(lname) {
+        if (lname.find("ctm") == 0) {
+            return true;
+        }
+        var hints = ["tread", "matrix", "ftms", "jht", "horizon", "technogym", "precor", "life fitness",
+            "lifefitness", "woodway", "nordictrack", "proform", "sole ", "kingsmith", "walkingpad", "echelon"];
+        for (var i = 0; i < hints.size(); i++) {
+            if (lname.find(hints[i]) != null) {
                 return true;
             }
         }
         return false;
     }
 
+    hidden function isExcluded(r) {
+        for (var i = 0; i < excluded.size(); i++) {
+            if (r.isSameDevice(excluded[i])) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    hidden function exclude(r) {
+        if (r != null && !isExcluded(r) && excluded.size() < 8) {
+            excluded.add(r);
+        }
+    }
+
+    hidden function noteSeen(r, name) {
+        var now = Sys.getTimer();
+        var oldest = 0;
+        for (var i = 0; i < seen.size(); i++) {
+            if (r.isSameDevice(seen[i][0])) {
+                seen[i] = [r, r.getRssi(), name, now];
+                return;
+            }
+            if (seen[i][3] < seen[oldest][3]) {
+                oldest = i;
+            }
+        }
+        if (seen.size() < 16) {
+            seen.add([r, r.getRssi(), name, now]);
+        } else {
+            seen[oldest] = [r, r.getRssi(), name, now];
+        }
+    }
+
+    hidden function recentSeen() {
+        var now = Sys.getTimer();
+        var out = [];
+        for (var i = 0; i < seen.size(); i++) {
+            if (now - seen[i][3] < 20000) {
+                out.add(seen[i]);
+            }
+        }
+        return out;
+    }
+
+    // While searching: the two strongest named devices the watch hears, e.g. "MTX-T50 -58  iPhone -71".
+    // Tells you what the treadmill is called (for the name filter) or that nothing is in range.
+    function diagText() {
+        if (link != LINK_SCANNING) {
+            return "";
+        }
+        var list = recentSeen();
+        var a = -1;
+        var b = -1;
+        for (var i = 0; i < list.size(); i++) {
+            if (list[i][2].length() == 0) {
+                continue;
+            }
+            if (a < 0 || list[i][1] > list[a][1]) {
+                b = a;
+                a = i;
+            } else if (b < 0 || list[i][1] > list[b][1]) {
+                b = i;
+            }
+        }
+        if (a < 0) {
+            return list.size() > 0 ? "" + list.size() + " unnamed" : "";
+        }
+        var s = shortName(list[a][2]) + " " + list[a][1];
+        if (b >= 0) {
+            s += "  " + shortName(list[b][2]) + " " + list[b][1];
+        }
+        return s;
+    }
+
+    hidden function shortName(n) {
+        return n.length() > 10 ? n.substring(0, 10) : n;
+    }
+
     hidden function connectBest() {
         var best = null;
         var bestRssi = -999;
         var bestName = "";
+        var bestProven = false;
         for (var i = 0; i < candidates.size(); i++) {
-            if (candidates[i][1] > bestRssi) {
-                best = candidates[i][0];
-                bestRssi = candidates[i][1];
-                bestName = candidates[i][2];
+            var c = candidates[i];
+            // a device that advertises FTMS always beats one only guessed from its name
+            if ((c[3] && !bestProven) || (c[3] == bestProven && c[1] > bestRssi)) {
+                best = c[0];
+                bestRssi = c[1];
+                bestName = c[2];
+                bestProven = c[3];
             }
         }
         if (best == null) {
             return;
+        }
+        if (!bestProven && Sys.getTimer() - scanStart < 8000) {
+            return;                        // give real FTMS adverts a few seconds first
         }
         if (bestRssi < cfg.rssiMin) {
             problem = "Move closer";
@@ -331,6 +455,8 @@ class FtmsManager extends Ble.BleDelegate {
         }
         problem = "";
         deviceName = bestName;
+        target = best;
+        targetProven = bestProven;
         setLink(LINK_CONNECTING);
         if (device.isConnected()) {        // onConnectedStateChanged is not always called
             onLinkUp();
@@ -379,6 +505,9 @@ class FtmsManager extends Ble.BleDelegate {
             setLink(LINK_SETUP);
             pump();
         } else if (now - linkSince > 10000) {
+            if (!targetProven) {
+                exclude(target);           // a real FTMS treadmill may just be slow: try it again
+            }
             dropAndRescan("No FTMS");
         }
     }
@@ -701,23 +830,32 @@ class FtmsManager extends Ble.BleDelegate {
             if (name == null) {
                 name = "";
             }
-            var nameOk = filter.length() > 0 && name.toLower().find(filter) != null;
-            if (filter.length() > 0 && !nameOk) {
+            noteSeen(r, name);
+            if (isExcluded(r)) {
                 continue;
             }
-            if (!nameOk && !advertisesFtms(r)) {
+            var lname = name.toLower();
+            var proven = false;
+            if (filter.length() > 0) {
+                if (lname.find(filter) == null) {
+                    continue;
+                }
+                proven = true;             // the user named it: trust that
+            } else if (advertisesFtms(r)) {
+                proven = true;
+            } else if (!looksLikeTreadmill(lname)) {
                 continue;
             }
             var known = false;
             for (var i = 0; i < candidates.size(); i++) {
                 if (r.isSameDevice(candidates[i][0])) {
-                    candidates[i] = [r, r.getRssi(), name];
+                    candidates[i] = [r, r.getRssi(), name, proven];
                     known = true;
                     break;
                 }
             }
             if (!known && candidates.size() < 8) {
-                candidates.add([r, r.getRssi(), name]);
+                candidates.add([r, r.getRssi(), name, proven]);
             }
         }
     }

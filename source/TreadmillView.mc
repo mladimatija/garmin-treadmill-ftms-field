@@ -149,7 +149,7 @@ class TreadmillView extends Ui.DataField {
             y += hx;
             drawLine(dc, cx, y, hm, fm, main, fg, fg);
             y += hm;
-            drawLine(dc, cx, y, hx, fx, incl + "  " + dist, fg, fg);
+            drawLine(dc, cx, y, hx, fx, mgr.isReady() ? incl + "  " + dist : mgr.diagText(), fg, fg);
         } else {
             // tiny slot: value and incline on one line
             var f = Gfx.FONT_SMALL;
@@ -215,6 +215,9 @@ class TreadmillView extends Ui.DataField {
     }
 
     hidden function targetLine() {
+        if (!mgr.isReady()) {
+            return mgr.diagText();               // while searching: what the watch can hear
+        }
         if (follower.refusedNow()) {
             return follower.refusedText();       // e.g. "Speed Refused"
         }

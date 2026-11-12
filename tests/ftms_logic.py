@@ -204,6 +204,36 @@ class Ftms:
         return bytes([Ftms.CP_SET_INCLINE, raw & 0xFF, (raw >> 8) & 0xFF])
 
     @staticmethod
+    def rawHasFtms(raw):
+        if raw is None:
+            return False
+        n = len(raw)
+        i = 0
+        while i < n:
+            ln = raw[i]
+            if ln == 0 or i + ln >= n:
+                break
+            t = raw[i + 1]
+            if t in (0x02, 0x03):
+                j = i + 2
+                while j + 1 <= i + ln:
+                    if raw[j] == 0x26 and raw[j + 1] == 0x18:
+                        return True
+                    j += 2
+            elif t == 0x16:
+                if ln >= 3 and raw[i + 2] == 0x26 and raw[i + 3] == 0x18:
+                    return True
+            elif t in (0x06, 0x07):
+                k = i + 2
+                while k + 15 <= i + ln:
+                    if raw[k] == 0xFB and raw[k + 12] == 0x26 and raw[k + 13] == 0x18 \
+                            and raw[k + 14] == 0 and raw[k + 15] == 0:
+                        return True
+                    k += 16
+            i += ln + 1
+        return False
+
+    @staticmethod
     def resultText(code):
         return {1: "OK", 2: "Not supported", 3: "Bad value", 4: "Refused", 5: "No control",
                 -2: "Write failed"}.get(code, "No reply")
@@ -563,7 +593,12 @@ class FtmsManager:
         self.linkSince = 0
         self.scanStart = 0
         self.scanning = False
-        self.candidates = []
+        self.candidates = []     # [scanResult, rssi, name, proven]
+        self.seen = []           # [scanResult, rssi, name, ms]
+        self.excluded = []
+        self.target = None
+        self.targetProven = False
+        self.searchSince = 0
         self.queue = []
         self.busy = False
         self.busyOp = None
@@ -641,7 +676,10 @@ class FtmsManager:
         if self.link == LINK_REGISTERING: return "Starting BLE"
         if self.link == LINK_ERROR: return self.problem
         if self.link == LINK_SCANNING:
-            if len(self.candidates) == 0: return "Searching..."
+            if len(self.candidates) == 0:
+                if get_timer() - self.searchSince < 10000: return "Searching..."
+                n = len(self.recentSeen())
+                return "No BLE devices" if n == 0 else "No FTMS (%d seen)" % n
             if len(self.problem) > 0: return self.problem
             return "Found %d" % len(self.candidates)
         if self.link == LINK_CONNECTING: return "Connecting"
@@ -706,6 +744,8 @@ class FtmsManager:
             self.setLink(LINK_ERROR)
 
     def startScan(self):
+        if self.link != LINK_SCANNING:
+            self.searchSince = get_timer()
         self.candidates = []
         self.scanStart = get_timer()
         self.device = None
@@ -719,14 +759,78 @@ class FtmsManager:
         self.scanning = on
 
     def advertisesFtms(self, r):
-        return self.svcUuid in r.serviceUuids
+        if self.svcUuid in r.serviceUuids:
+            return True
+        sd = r.serviceData.get(self.svcUuid)
+        if sd is not None and len(sd) > 0:
+            return True
+        return Ftms.rawHasFtms(r.rawData)
+
+    HINTS = ["tread", "matrix", "ftms", "jht", "horizon", "technogym", "precor", "life fitness",
+             "lifefitness", "woodway", "nordictrack", "proform", "sole ", "kingsmith", "walkingpad", "echelon"]
+
+    def looksLikeTreadmill(self, lname):
+        if lname.find("ctm") == 0:
+            return True
+        return any(lname.find(h) >= 0 for h in self.HINTS)
+
+    def isExcluded(self, r):
+        return any(r.isSameDevice(x) for x in self.excluded)
+
+    def exclude(self, r):
+        if r is not None and not self.isExcluded(r) and len(self.excluded) < 8:
+            self.excluded.append(r)
+
+    def noteSeen(self, r, name):
+        now = get_timer()
+        oldest = 0
+        for i, e in enumerate(self.seen):
+            if r.isSameDevice(e[0]):
+                self.seen[i] = [r, r.rssi, name, now]
+                return
+            if e[3] < self.seen[oldest][3]:
+                oldest = i
+        if len(self.seen) < 16:
+            self.seen.append([r, r.rssi, name, now])
+        else:
+            self.seen[oldest] = [r, r.rssi, name, now]
+
+    def recentSeen(self):
+        now = get_timer()
+        return [e for e in self.seen if now - e[3] < 20000]
+
+    def diagText(self):
+        if self.link != LINK_SCANNING:
+            return ""
+        lst = self.recentSeen()
+        a = b = -1
+        for i, e in enumerate(lst):
+            if len(e[2]) == 0:
+                continue
+            if a < 0 or e[1] > lst[a][1]:
+                b = a
+                a = i
+            elif b < 0 or e[1] > lst[b][1]:
+                b = i
+        if a < 0:
+            return ("%d unnamed" % len(lst)) if len(lst) > 0 else ""
+        s = self.shortName(lst[a][2]) + " " + str(lst[a][1])
+        if b >= 0:
+            s += "  " + self.shortName(lst[b][2]) + " " + str(lst[b][1])
+        return s
+
+    @staticmethod
+    def shortName(n):
+        return n[0:10] if len(n) > 10 else n
 
     def connectBest(self):
-        best, bestRssi, bestName = None, -999, ""
+        best, bestRssi, bestName, bestProven = None, -999, "", False
         for c in self.candidates:
-            if c[1] > bestRssi:
-                best, bestRssi, bestName = c
+            if (c[3] and not bestProven) or (c[3] == bestProven and c[1] > bestRssi):
+                best, bestRssi, bestName, bestProven = c
         if best is None:
+            return
+        if not bestProven and get_timer() - self.scanStart < 8000:
             return
         if bestRssi < self.cfg.rssiMin:
             self.problem = "Move closer"
@@ -743,6 +847,8 @@ class FtmsManager:
             return
         self.problem = ""
         self.deviceName = bestName
+        self.target = best
+        self.targetProven = bestProven
         self.setLink(LINK_CONNECTING)
         if self.device.isConnected():
             self.onLinkUp()
@@ -770,6 +876,8 @@ class FtmsManager:
             self.setLink(LINK_SETUP)
             self.pump()
         elif now - self.linkSince > 10000:
+            if not self.targetProven:
+                self.exclude(self.target)
             self.dropAndRescan("No FTMS")
 
     def resetSession(self):
@@ -989,19 +1097,27 @@ class FtmsManager:
         flt = self.cfg.nameFilter.lower()
         for r in results:
             name = r.name or ""
-            nameOk = len(flt) > 0 and name.lower().find(flt) >= 0
-            if len(flt) > 0 and not nameOk:
+            self.noteSeen(r, name)
+            if self.isExcluded(r):
                 continue
-            if not nameOk and not self.advertisesFtms(r):
+            lname = name.lower()
+            proven = False
+            if len(flt) > 0:
+                if lname.find(flt) < 0:
+                    continue
+                proven = True
+            elif self.advertisesFtms(r):
+                proven = True
+            elif not self.looksLikeTreadmill(lname):
                 continue
             known = False
             for i, c in enumerate(self.candidates):
                 if r.isSameDevice(c[0]):
-                    self.candidates[i] = [r, r.rssi, name]
+                    self.candidates[i] = [r, r.rssi, name, proven]
                     known = True
                     break
             if not known and len(self.candidates) < 8:
-                self.candidates.append([r, r.rssi, name])
+                self.candidates.append([r, r.rssi, name, proven])
 
     def onConnectedStateChanged(self, dev, state):
         if state == CONNECTION_STATE_CONNECTED:

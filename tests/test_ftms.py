@@ -83,6 +83,20 @@ class TestPackets(unittest.TestCase):
         self.assertEqual(Ftms.parseFeature(bytes([0x0C, 0x14, 0, 0, 0x03, 0, 0, 0])), [0x140C, 3])
 
 
+class TestAdvertising(unittest.TestCase):
+    def test_raw_ad_parsing(self):
+        flags = bytes([0x02, 0x01, 0x06])
+        self.assertTrue(Ftms.rawHasFtms(flags + bytes([0x05, 0x03, 0x0D, 0x18, 0x26, 0x18])))   # 16-bit list
+        self.assertTrue(Ftms.rawHasFtms(flags + bytes([0x06, 0x16, 0x26, 0x18, 0x01, 0x01, 0x00])))  # service data
+        base = bytes([0xFB, 0x34, 0x9B, 0x5F, 0x80, 0x00, 0x00, 0x80, 0x00, 0x10, 0x00, 0x00, 0x26, 0x18, 0x00, 0x00])
+        self.assertTrue(Ftms.rawHasFtms(flags + bytes([0x11, 0x07]) + base))                     # 128-bit list
+        self.assertFalse(Ftms.rawHasFtms(flags + bytes([0x03, 0x03, 0x0D, 0x18])))               # heart rate only
+        self.assertFalse(Ftms.rawHasFtms(flags + bytes([0x09, 0x03, 0x26])))                     # truncated
+        self.assertFalse(Ftms.rawHasFtms(bytes([])))
+        self.assertFalse(Ftms.rawHasFtms(None))
+        self.assertFalse(Ftms.rawHasFtms(flags + bytes([0x00, 0x00, 0x00])))                     # zero padding
+
+
 class TestCommands(unittest.TestCase):
     def test_encode(self):
         self.assertEqual(Ftms.encodeSpeed(12.0, False), bytes([0x02, 0xB0, 0x04]))
@@ -491,6 +505,85 @@ class TestSessions(unittest.TestCase):
         CLOCK.ms = 60000                    # machine sent nothing while stopped
         st.setSpeed(1.0)                    # restarted
         self.assertFalse(st.safetyKey)
+
+    def test_found_via_raw_advertising_only(self):
+        w, m = self.gym(machine=sim.FakeTreadmill(advert="raw"), others=False)
+        w.run(12)
+        self.assertTrue(w.mgr.isReady(), w.mgr.statusText())
+
+    def test_found_via_service_data_only(self):
+        w, m = self.gym(machine=sim.FakeTreadmill(advert="servicedata"), others=False)
+        w.run(12)
+        self.assertTrue(w.mgr.isReady(), w.mgr.statusText())
+
+    def test_found_by_name_when_advert_shows_nothing(self):
+        m = sim.FakeTreadmill(name="MATRIX T50", advert="none")
+        w, m = self.gym(machine=m, others=False)
+        w.run(6)
+        self.assertFalse(w.mgr.isReady())                 # waits for real FTMS adverts first
+        w.run(12)
+        self.assertTrue(w.mgr.isReady(), w.mgr.statusText())
+
+    def test_matrix_console_found_by_serial_name(self):
+        # Matrix commercial consoles advertise their serial number as the name
+        m = sim.FakeTreadmill(name="CTM551L0000K00001", rssi=-60, advert="none")
+        w, m = self.gym(machine=m, others=False)
+        w.run(14)
+        self.assertTrue(w.mgr.isReady(), w.mgr.statusText())
+        self.assertEqual(w.mgr.deviceName, "CTM551L0000K00001")
+
+    def test_matrix_console_advertising(self):
+        # as a Matrix console shows in nRF Connect: 0x1826 listed and service data 01 01 00
+        m = sim.FakeTreadmill(name="CTM551L0000K00001", rssi=-60, advert="uuids")
+        w, m = self.gym(machine=m, others=False)
+        w.run(12)
+        self.assertTrue(w.mgr.isReady(), w.mgr.statusText())
+
+    def test_name_guess_that_is_not_ftms_is_skipped(self):
+        bike = sim.FakeTreadmill(name="Matrix Bike", rssi=-50, advert="none", ftms=False)
+        tm = sim.FakeTreadmill(name="MATRIX-7", rssi=-60, advert="none")
+        w = sim.Watch([bike, tm])
+        w.run(60)
+        self.assertTrue(w.mgr.isReady(), w.mgr.statusText())
+        self.assertEqual(w.mgr.deviceName, "MATRIX-7")
+        self.assertTrue(tm.connected)
+        self.assertFalse(bike.connected)
+
+    def test_proven_ftms_beats_name_guess(self):
+        guess = sim.FakeTreadmill(name="Treadmill speaker", rssi=-45, advert="none", ftms=False)
+        real = sim.FakeTreadmill(name="X", rssi=-70)
+        w = sim.Watch([guess, real])
+        w.run(12)
+        self.assertEqual(w.mgr.deviceName, "X")
+        self.assertFalse(guess.connected)
+
+    def test_slow_first_setup_of_real_treadmill_is_retried(self):
+        m = sim.FakeTreadmill(discovery_delay=12000)    # first connection: setup times out
+        w, m = self.gym(machine=m, others=False)
+        w.run(20)
+        self.assertFalse(w.mgr.isReady())
+        m.discovery_delay = 0
+        w.run(30)
+        self.assertTrue(w.mgr.isReady(), w.mgr.statusText())
+        self.assertEqual(w.mgr.excluded, [])
+
+    def test_diagnostics_when_no_treadmill_advertises(self):
+        phone = sim.FakeTreadmill(name="iPhone", rssi=-50, advert="none", ftms=False)
+        pods = sim.FakeTreadmill(name="AirPods Pro 2", rssi=-62, advert="none", ftms=False)
+        w = sim.Watch([phone, pods])
+        w.run(5)
+        self.assertEqual(w.mgr.statusText(), "Searching...")
+        w.run(10)
+        self.assertEqual(w.mgr.statusText(), "No FTMS (2 seen)")
+        self.assertEqual(w.mgr.diagText(), "iPhone -50  AirPods Pr -62")
+        w.run(60)
+        self.assertFalse(phone.connected or pods.connected)
+
+    def test_diagnostics_when_nothing_in_range(self):
+        w = sim.Watch([])
+        w.run(15)
+        self.assertEqual(w.mgr.statusText(), "No BLE devices")
+        self.assertEqual(w.mgr.diagText(), "")
 
     def test_name_filter(self):
         cfg = L.FieldSettings(nameFilter="matrix-2")

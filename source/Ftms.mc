@@ -216,6 +216,44 @@ module Ftms {
         return b;
     }
 
+    // Does raw advertising data (AD structures: length, type, data) mention service 0x1826?
+    // Checks 16-bit UUID lists (types 0x02/0x03), 16-bit service data (0x16) and
+    // 128-bit UUID lists (0x06/0x07, base UUID 0000xxxx-0000-1000-8000-00805f9b34fb).
+    function rawHasFtms(raw) {
+        if (raw == null) {
+            return false;
+        }
+        var n = raw.size();
+        var i = 0;
+        while (i < n) {
+            var len = raw[i];
+            if (len == 0 || i + len >= n) {
+                break;                     // end padding or a truncated structure
+            }
+            var type = raw[i + 1];
+            if (type == 0x02 || type == 0x03) {
+                for (var j = i + 2; j + 1 <= i + len; j += 2) {
+                    if (raw[j] == 0x26 && raw[j + 1] == 0x18) {
+                        return true;
+                    }
+                }
+            } else if (type == 0x16) {
+                if (len >= 3 && raw[i + 2] == 0x26 && raw[i + 3] == 0x18) {
+                    return true;
+                }
+            } else if (type == 0x06 || type == 0x07) {
+                for (var k = i + 2; k + 15 <= i + len; k += 16) {
+                    if (raw[k] == 0xFB && raw[k + 12] == 0x26 && raw[k + 13] == 0x18
+                            && raw[k + 14] == 0x00 && raw[k + 15] == 0x00) {
+                        return true;
+                    }
+                }
+            }
+            i += len + 1;
+        }
+        return false;
+    }
+
     function resultText(code) {
         if (code == RES_SUCCESS) { return "OK"; }
         if (code == RES_NOT_SUPPORTED) { return "Not supported"; }

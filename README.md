@@ -209,7 +209,10 @@ Not supported:
 
 1. Stand on the treadmill, clip on the safety key, start the belt from the console and walk at an
    easy speed. The console's Bluetooth must be on; on consoles with an "apps / Bluetooth connection"
-   setting, enable it.
+   setting, enable it. **Matrix consoles: open the console's Bluetooth device-pairing screen
+   ("Pair device", デバイスのペアリング on Japanese consoles) and leave it open until the watch shows the
+   treadmill's name.** The console only announces itself over Bluetooth while that screen is showing.
+   Its "machine name" (マシン名) is the console's serial number, starting with `CTM`.
 2. On the watch, start a Treadmill activity with a workout (fēnix: **START → Treadmill**, hold
    **MENU → Training → Workouts →** your workout **→ Do Workout**) and scroll to the field. Within a
    few seconds it shows `Searching...` → `Connecting` → the treadmill's name. It connects to the
@@ -237,6 +240,8 @@ Not supported:
 | Status | Meaning |
 |---|---|
 | `Starting BLE`, `Searching...`, `Found 5` | Looking for treadmills |
+| `No FTMS (6 seen)` + names below | After 10 s: the watch hears 6 Bluetooth devices, none of them a treadmill. The bottom line shows the two strongest with their signal, e.g. `iPhone -58  AirPods -70` |
+| `No BLE devices` | After 10 s: the watch hears nothing at all (watch Bluetooth off?) |
 | `Move closer` | Treadmills found, but all weaker than the signal limit |
 | `Connecting`, `Setting up`, `Reconnecting` | Setting up or restoring the link (it reconnects by itself) |
 | `AUTO` (green) | Following the workout |
@@ -298,8 +303,10 @@ the next person with the same machine.
 
 | Problem | Try |
 |---|---|
-| Stays on `Searching...` | The console's Bluetooth or app connection is off, or another phone or app is connected to it (FTMS allows one). Restart the console session. |
-| Connects to the wrong treadmill | Put part of your treadmill's name (shown on the field) into *Only treadmills whose name contains*, or raise the signal limit to −65 dBm. |
+| `No FTMS (n seen)`, treadmill not in the names | The console isn't announcing itself: its Bluetooth or app connection is off or, on Matrix consoles, the device-pairing screen isn't open (see [Using it](#using-it)). Also check that no other phone or app is connected to it (FTMS allows one). |
+| Treadmill name shows in the bottom line but it never connects | Check with **nRF Connect** (phone app, *Scanner*): your treadmill should list *Services: Fitness Machine*. Don't tap *Connect* there, and close the app afterwards, or it holds the treadmill's one connection. |
+| `No BLE devices` | Restart the watch, and make sure its Bluetooth (phone connection) isn't switched off. |
+| Connects to the wrong treadmill | Put part of your treadmill's name (shown on the field; on Matrix consoles the last digits of the serial on the pairing screen) into *Only treadmills whose name contains*, or raise the signal limit to −65 dBm. |
 | `BLE busy` | Too many Bluetooth sensors or apps on the watch; remove another Connect IQ Bluetooth field from the screen. |
 | Speed is off by a factor of 1.6 | Turn on *Treadmill works in mph*. |
 | `REFUSED` with `Speed Refused` / `Incline Refused` | Some consoles want an FTMS start first; the field already sends one per step while the belt is moving. If the console still refuses, set that value by hand. |
