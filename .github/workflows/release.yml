@@ -114,6 +114,10 @@ jobs:
           One \`.prg\` per watch: find your watch's device id in the
           [supported watches](https://github.com/${GITHUB_REPOSITORY}#supported-watches) list and copy
           \`FtmsTreadmill-<device id>.prg\` from the zip into \`GARMIN/Apps/\` on the watch.
+
+          > **Use at your own risk.** The field changes the speed and incline of a moving treadmill.
+          > Keep the safety key clipped on and read the
+          > [disclaimer](https://github.com/${GITHUB_REPOSITORY}#disclaimer) before using it.
           NOTES
           gh release create "$GITHUB_REF_NAME" "$ZIP" "$ZIP.sha256" \
             --repo "$GITHUB_REPOSITORY" \
