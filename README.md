@@ -46,6 +46,7 @@ It was written for Matrix treadmills with the Touch console.
 - [Development](#development)
 - [Releasing](#releasing)
 - [Known limitations](#known-limitations)
+- [Disclaimer](#disclaimer)
 - [License](#license)
 
 ## Install
@@ -250,6 +251,13 @@ Not supported:
 
 ## Safety
 
+> [!WARNING]
+> The field changes the speed and incline of a moving treadmill. Use it at your own risk: keep the
+> safety key clipped on, stay alert, and be ready to stop the belt from the console at any time.
+> See the [disclaimer](#disclaimer).
+
+The field is built to stay out of the way:
+
 - Commands are only sent while the **watch timer is running and the belt is already moving**.
 - The belt is **never started from the watch** unless you turn that setting on, and even then only
   within 10 seconds of pressing Start/Resume on the watch, never later (e.g. after reconnecting).
@@ -384,6 +392,18 @@ Garmin changes the agreement, the build stops until the new hash is put there.
 - Whether a console accepts speed and incline commands over FTMS, not just sharing its data, can only
   be found out on the machine. The field detects it and falls back to read-only.
 - A data field only sees the current workout step, and can't change the watch's own distance or pace.
+
+## Disclaimer
+
+You use this field entirely at your own risk. It is provided as is, without warranty of any kind,
+and the author is not responsible for any injury, damage to treadmills, watches or other property,
+or any other loss arising from its use, as also set out in the [license](LICENSE.md). Follow the
+treadmill maker's safety instructions and your gym's rules, and check that you may connect your
+own devices to the gym's machines.
+
+This is an independent project, not affiliated with or endorsed by Garmin or Matrix Fitness.
+Garmin, Connect IQ and the watch names are trademarks of Garmin Ltd. or its subsidiaries; other
+product names are trademarks of their respective owners.
 
 ## License
 
