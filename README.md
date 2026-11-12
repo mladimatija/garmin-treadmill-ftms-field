@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/mladimatija/garmin-treadmill-ftms-field/releases/latest"><img src="https://img.shields.io/badge/Download-latest%20release-1f9d68?style=for-the-badge&amp;logo=garmin&amp;logoColor=white" alt="Download the latest release"></a>
+  <a href="https://github.com/mladimatija/garmin-treadmill-ftms-field/releases/latest"><img src="https://img.shields.io/badge/Download-latest%20release-1f9d68?style=for-the-badge" alt="Download the latest release"></a>
 </p>
 
 <p align="center">
