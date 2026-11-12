@@ -7,7 +7,7 @@
 <p align="center">
   <a href="https://github.com/mladimatija/garmin-treadmill-ftms-field/actions/workflows/ci.yml"><img src="https://github.com/mladimatija/garmin-treadmill-ftms-field/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="https://github.com/mladimatija/garmin-treadmill-ftms-field/releases/latest"><img src="https://img.shields.io/github/v/release/mladimatija/garmin-treadmill-ftms-field" alt="Latest release"></a>
-  <a href="https://github.com/mladimatija/garmin-treadmill-ftms-field/releases"><img src="https://img.shields.io/github/downloads/mladimatija/garmin-treadmill-ftms-field/total" alt="Downloads"></a>
+  <a href="https://github.com/mladimatija/garmin-treadmill-ftms-field/releases"><img src="https://img.shields.io/github/downloads/mladimatija/garmin-treadmill-ftms-field/total?label=downloads" alt="Downloads"></a>
   <a href="#supported-watches"><img src="https://img.shields.io/badge/watches-93-informational" alt="93 watches"></a>
   <a href="LICENSE.md"><img src="https://img.shields.io/badge/license-PolyForm%20Noncommercial-blue" alt="License: PolyForm Noncommercial"></a>
 </p>
