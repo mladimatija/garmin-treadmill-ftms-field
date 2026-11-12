@@ -10,7 +10,7 @@
     field does not fit. Edge bike computers have the APIs but no treadmill activity.
 -->
 <iq:manifest xmlns:iq="http://www.garmin.com/xml/connectiq" version="3">
-    <iq:application entry="FtmsTreadmillApp" id="30c82372b8a0408fb2d3890774916b74" launcherIcon="@Drawables.LauncherIcon" minSdkVersion="3.2.0" name="@Strings.AppName" type="datafield" version="1.0.0">
+    <iq:application entry="FtmsTreadmillApp" id="30c82372b8a0408fb2d3890774916b74" launcherIcon="@Drawables.LauncherIcon" minSdkVersion="3.2.0" name="@Strings.AppName" type="datafield" version="1.1.0">
         <iq:products>
             <!-- Approach S50, S70 42/47 mm, S72 43/47 mm -->
             <iq:product id="approachs50"/>
