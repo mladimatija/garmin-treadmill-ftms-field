@@ -1,0 +1,65 @@
+name: Treadmill report
+description: Tell others how the field works with your treadmill, good or bad.
+labels: [treadmill report]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Reports like this help other people know what to expect from their gym's treadmills.
+        The test workout in the README ("Trying it on a new treadmill") covers everything asked here.
+  - type: input
+    id: treadmill
+    attributes:
+      label: Treadmill and console
+      description: Brand, model and console as shown on the machine.
+      placeholder: Matrix T75 with Touch XL console
+    validations:
+      required: true
+  - type: input
+    id: name
+    attributes:
+      label: Bluetooth name shown on the field
+      placeholder: MATRIX-12
+  - type: input
+    id: watch
+    attributes:
+      label: Watch
+      placeholder: fēnix 7X Solar (fenix7x)
+    validations:
+      required: true
+  - type: dropdown
+    id: reading
+    attributes:
+      label: Reading speed, incline and distance
+      options:
+        - Works
+        - Partly (describe below)
+        - Doesn't connect
+    validations:
+      required: true
+  - type: dropdown
+    id: control
+    attributes:
+      label: Setting speed and incline from a workout
+      options:
+        - Works
+        - Speed only
+        - Incline only
+        - READ ONLY / NO CONTROL / REFUSED
+        - Didn't try
+    validations:
+      required: true
+  - type: dropdown
+    id: source
+    attributes:
+      label: End of the bottom line during the workout
+      description: Shows whether the watch passes step notes to the field.
+      options:
+        - notes
+        - pace
+        - Didn't check
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything else
+      description: Settings you had to change (mph, name filter, signal limit), quirks, console messages.

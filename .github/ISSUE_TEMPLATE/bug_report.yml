@@ -1,0 +1,56 @@
+name: Bug report
+description: The field crashes, shows wrong values or controls the treadmill wrongly.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. The details below make it possible to reproduce the problem without
+        your watch or treadmill.
+  - type: input
+    id: watch
+    attributes:
+      label: Watch
+      description: Model and device id (from the release file name, e.g. `fenix7x`).
+      placeholder: fēnix 7X Solar (fenix7x)
+    validations:
+      required: true
+  - type: input
+    id: firmware
+    attributes:
+      label: Watch firmware
+      description: Settings → System → About.
+      placeholder: "20.22"
+  - type: input
+    id: version
+    attributes:
+      label: Field version
+      placeholder: v1.0.0
+    validations:
+      required: true
+  - type: input
+    id: treadmill
+    attributes:
+      label: Treadmill and console
+      placeholder: Matrix T75 with Touch XL console
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what the field showed (status line, values).
+    validations:
+      required: true
+  - type: textarea
+    id: workout
+    attributes:
+      label: Workout step
+      description: If it's about speed or incline control, the step's notes and pace target.
+      placeholder: "Notes: Treadmill 12.0 km/h, 1% incline · Pace target 4:55–5:05 /km"
+  - type: textarea
+    id: log
+    attributes:
+      label: Crash log
+      description: If the field showed `IQ!`, paste `GARMIN/APPS/LOGS/CIQ_LOG.YML` from the watch.
+      render: yaml

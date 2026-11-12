@@ -1,6 +1,25 @@
-# FTMS Treadmill for Garmin
+<p align="center">
+  <img src=".github/assets/logo.svg" width="112" alt="">
+</p>
 
-[![CI](https://github.com/mladimatija/garmin-treadmill-ftms-field/actions/workflows/ci.yml/badge.svg)](https://github.com/mladimatija/garmin-treadmill-ftms-field/actions/workflows/ci.yml)
+<h1 align="center">FTMS Treadmill for Garmin</h1>
+
+<p align="center">
+  <a href="https://github.com/mladimatija/garmin-treadmill-ftms-field/actions/workflows/ci.yml"><img src="https://github.com/mladimatija/garmin-treadmill-ftms-field/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/mladimatija/garmin-treadmill-ftms-field/releases/latest"><img src="https://img.shields.io/github/v/release/mladimatija/garmin-treadmill-ftms-field" alt="Latest release"></a>
+  <a href="https://github.com/mladimatija/garmin-treadmill-ftms-field/releases"><img src="https://img.shields.io/github/downloads/mladimatija/garmin-treadmill-ftms-field/total" alt="Downloads"></a>
+  <a href="#supported-watches"><img src="https://img.shields.io/badge/watches-93-informational" alt="93 watches"></a>
+  <a href="LICENSE.md"><img src="https://img.shields.io/badge/license-PolyForm%20Noncommercial-blue" alt="License: PolyForm Noncommercial"></a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/mladimatija/garmin-treadmill-ftms-field/releases/latest"><img src="https://img.shields.io/badge/Download-latest%20release-1f9d68?style=for-the-badge&amp;logo=garmin&amp;logoColor=white" alt="Download the latest release"></a>
+</p>
+
+<p align="center">
+  <img src=".github/assets/screenshot.png" width="280" alt="The field on a fēnix 8 during a workout: AUTO MATRIX-12, 13.3 km/h, 4:31 /km, 1.0 % incline, 4.87 km, target 13.3 km/h and 1.0 % from the step notes"><br>
+  <sub>fēnix 8 in the Connect IQ simulator, with sample values</sub>
+</p>
 
 A Connect IQ data field that connects a Garmin watch to a Bluetooth FTMS treadmill and:
 
@@ -263,6 +282,9 @@ pace alerts, because wrist pace on a treadmill isn't exact; ignore them.
 
 If reading works but control shows `READ ONLY` or `NO CONTROL`, the console only shares its data over
 Bluetooth: live data and recording still work, and you set the speed by hand from the target line.
+
+Whatever the result, a [treadmill report](https://github.com/mladimatija/garmin-treadmill-ftms-field/issues/new?template=treadmill_report.yml) helps
+the next person with the same machine.
 
 ## Troubleshooting
 

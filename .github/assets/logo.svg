@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1f2a3d"/>
+      <stop offset="1" stop-color="#111722"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="56" fill="url(#bg)"/>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <!-- signal -->
+    <g stroke="#3ddc97" stroke-width="12">
+      <path d="M 59 110 A 30 30 0 0 1 101 110"/>
+      <path d="M 40 92 A 56 56 0 0 1 120 92"/>
+    </g>
+    <circle cx="80" cy="131" r="9" fill="#3ddc97"/>
+    <!-- treadmill -->
+    <g stroke="#ffffff">
+      <path d="M 40 186 L 200 186" stroke-width="16"/>
+      <path d="M 186 186 L 160 78" stroke-width="13"/>
+      <path d="M 160 78 L 138 85" stroke-width="13"/>
+      <path d="M 58 200 L 58 210 M 182 200 L 182 210" stroke-width="10"/>
+    </g>
+  </g>
+</svg>
