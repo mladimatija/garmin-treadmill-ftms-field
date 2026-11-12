@@ -1,0 +1,7 @@
+project.manifest = manifest.xml
+
+# The code is written untyped (Monkey C "Any"). Current SDKs type-check at "gradual" level by
+# default, which is known to reject the profile dictionary passed to registerProfile() even in
+# Garmin's own sample. 0 = no type checking. Leave VS Code's "Monkey C: Type Check Level" on
+# "Default" so this line is used.
+project.typecheck = 0

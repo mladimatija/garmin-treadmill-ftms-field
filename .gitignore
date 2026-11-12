@@ -1,0 +1,15 @@
+# Build output
+bin/
+dist/
+
+# Signing keys
+*.der
+*.pem
+
+# Python
+__pycache__/
+
+# Editors and OS
+.idea/
+.vscode/
+.DS_Store

@@ -1,0 +1,38 @@
+<strings>
+    <string id="AppName">FTMS Treadmill</string>
+
+    <!-- settings -->
+    <string id="NameFilterTitle">Only treadmills whose name contains (empty = closest)</string>
+    <string id="RssiMinTitle">Ignore treadmills weaker than (dBm)</string>
+    <string id="ControlEnabledTitle">Control speed and incline from the workout</string>
+    <string id="UseNotesTitle">Read "km/h" and "% incline" from step notes</string>
+    <string id="UsePaceTargetTitle">Otherwise use the middle of the pace target</string>
+    <string id="DefaultInclineTitle">Incline when a step gives none (%, -1 = leave as is)</string>
+    <string id="MaxSpeedTitle">Never set speed above (km/h)</string>
+    <string id="MaxInclineTitle">Never set incline above (%)</string>
+    <string id="AutoResumeTitle">After I change the console, take over again at the next step</string>
+    <string id="RemoteStartTitle">Start the belt from the watch Start button (careful)</string>
+    <string id="PauseWithWatchTitle">Pausing the watch pauses the belt</string>
+    <string id="MphModeTitle">Treadmill works in mph</string>
+    <string id="RecordFitTitle">Record treadmill data in the activity</string>
+    <string id="MainValueTitle">Big number</string>
+    <string id="MainSpeed">Speed (km/h)</string>
+    <string id="MainPace">Pace (min/km)</string>
+
+    <!-- FIT contributions -->
+    <string id="FitSpeed">Treadmill speed</string>
+    <string id="FitIncline">Treadmill incline</string>
+    <string id="FitTarget">Target speed</string>
+    <string id="FitLapDist">TM distance</string>
+    <string id="FitLapSpeed">TM speed</string>
+    <string id="FitLapAscent">TM ascent</string>
+    <string id="FitLapIncline">TM incline</string>
+    <string id="FitDist">Treadmill distance</string>
+    <string id="FitAvgSpeed">Treadmill avg speed</string>
+    <string id="FitAscent">Treadmill ascent</string>
+    <string id="FitAvgIncline">Treadmill avg incline</string>
+    <string id="UnitKmh">km/h</string>
+    <string id="UnitPct">%</string>
+    <string id="UnitKm">km</string>
+    <string id="UnitM">m</string>
+</strings>

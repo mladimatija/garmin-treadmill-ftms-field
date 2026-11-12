@@ -1,0 +1,47 @@
+<settings>
+    <setting propertyKey="@Properties.ControlEnabled" title="@Strings.ControlEnabledTitle">
+        <settingConfig type="boolean"/>
+    </setting>
+    <setting propertyKey="@Properties.UseNotes" title="@Strings.UseNotesTitle">
+        <settingConfig type="boolean"/>
+    </setting>
+    <setting propertyKey="@Properties.UsePaceTarget" title="@Strings.UsePaceTargetTitle">
+        <settingConfig type="boolean"/>
+    </setting>
+    <setting propertyKey="@Properties.DefaultIncline" title="@Strings.DefaultInclineTitle">
+        <settingConfig type="numeric" min="-1" max="15"/>
+    </setting>
+    <setting propertyKey="@Properties.MaxSpeed" title="@Strings.MaxSpeedTitle">
+        <settingConfig type="numeric" min="1" max="25"/>
+    </setting>
+    <setting propertyKey="@Properties.MaxIncline" title="@Strings.MaxInclineTitle">
+        <settingConfig type="numeric" min="0" max="20"/>
+    </setting>
+    <setting propertyKey="@Properties.AutoResume" title="@Strings.AutoResumeTitle">
+        <settingConfig type="boolean"/>
+    </setting>
+    <setting propertyKey="@Properties.RemoteStart" title="@Strings.RemoteStartTitle">
+        <settingConfig type="boolean"/>
+    </setting>
+    <setting propertyKey="@Properties.PauseWithWatch" title="@Strings.PauseWithWatchTitle">
+        <settingConfig type="boolean"/>
+    </setting>
+    <setting propertyKey="@Properties.MainValue" title="@Strings.MainValueTitle">
+        <settingConfig type="list">
+            <listEntry value="0">@Strings.MainSpeed</listEntry>
+            <listEntry value="1">@Strings.MainPace</listEntry>
+        </settingConfig>
+    </setting>
+    <setting propertyKey="@Properties.NameFilter" title="@Strings.NameFilterTitle">
+        <settingConfig type="alphaNumeric" maxLength="20"/>
+    </setting>
+    <setting propertyKey="@Properties.RssiMin" title="@Strings.RssiMinTitle">
+        <settingConfig type="numeric" min="-120" max="0"/>
+    </setting>
+    <setting propertyKey="@Properties.MphMode" title="@Strings.MphModeTitle">
+        <settingConfig type="boolean"/>
+    </setting>
+    <setting propertyKey="@Properties.RecordFit" title="@Strings.RecordFitTitle">
+        <settingConfig type="boolean"/>
+    </setting>
+</settings>

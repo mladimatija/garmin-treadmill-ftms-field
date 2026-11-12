@@ -1,0 +1,29 @@
+<fitContributions>
+    <!-- record (charts) -->
+    <fitField id="0" displayInChart="true" sortOrder="0" precision="1"
+        chartTitle="@Strings.FitSpeed" dataLabel="@Strings.FitSpeed" unitLabel="@Strings.UnitKmh" fillColor="#1E88E5"/>
+    <fitField id="1" displayInChart="true" sortOrder="1" precision="1"
+        chartTitle="@Strings.FitIncline" dataLabel="@Strings.FitIncline" unitLabel="@Strings.UnitPct" fillColor="#43A047"/>
+    <fitField id="2" displayInChart="true" sortOrder="2" precision="1"
+        chartTitle="@Strings.FitTarget" dataLabel="@Strings.FitTarget" unitLabel="@Strings.UnitKmh" fillColor="#FB8C00"/>
+
+    <!-- lap columns -->
+    <fitField id="3" displayInActivityLaps="true" sortOrder="3" precision="2"
+        dataLabel="@Strings.FitLapDist" unitLabel="@Strings.UnitKm"/>
+    <fitField id="4" displayInActivityLaps="true" sortOrder="4" precision="1"
+        dataLabel="@Strings.FitLapSpeed" unitLabel="@Strings.UnitKmh"/>
+    <fitField id="5" displayInActivityLaps="true" sortOrder="5" precision="0"
+        dataLabel="@Strings.FitLapAscent" unitLabel="@Strings.UnitM"/>
+    <fitField id="6" displayInActivityLaps="true" sortOrder="6" precision="1"
+        dataLabel="@Strings.FitLapIncline" unitLabel="@Strings.UnitPct"/>
+
+    <!-- activity summary -->
+    <fitField id="7" displayInActivitySummary="true" sortOrder="7" precision="2"
+        dataLabel="@Strings.FitDist" unitLabel="@Strings.UnitKm"/>
+    <fitField id="8" displayInActivitySummary="true" sortOrder="8" precision="1"
+        dataLabel="@Strings.FitAvgSpeed" unitLabel="@Strings.UnitKmh"/>
+    <fitField id="9" displayInActivitySummary="true" sortOrder="9" precision="0"
+        dataLabel="@Strings.FitAscent" unitLabel="@Strings.UnitM"/>
+    <fitField id="10" displayInActivitySummary="true" sortOrder="10" precision="1"
+        dataLabel="@Strings.FitAvgIncline" unitLabel="@Strings.UnitPct"/>
+</fitContributions>

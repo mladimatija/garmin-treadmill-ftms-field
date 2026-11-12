@@ -1,0 +1,16 @@
+<properties>
+    <property id="NameFilter" type="string"></property>
+    <property id="RssiMin" type="number">-90</property>
+    <property id="ControlEnabled" type="boolean">true</property>
+    <property id="UseNotes" type="boolean">true</property>
+    <property id="UsePaceTarget" type="boolean">true</property>
+    <property id="DefaultIncline" type="float">1.0</property>
+    <property id="MaxSpeed" type="float">16.0</property>
+    <property id="MaxIncline" type="float">8.0</property>
+    <property id="AutoResume" type="boolean">true</property>
+    <property id="RemoteStart" type="boolean">false</property>
+    <property id="PauseWithWatch" type="boolean">false</property>
+    <property id="MphMode" type="boolean">false</property>
+    <property id="RecordFit" type="boolean">true</property>
+    <property id="MainValue" type="number">0</property>
+</properties>
