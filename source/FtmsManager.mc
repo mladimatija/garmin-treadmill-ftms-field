@@ -54,11 +54,17 @@ class FtmsManager extends Ble.BleDelegate {
     hidden var linkSince = 0;
     hidden var scanStart = 0;
     hidden var scanning = false;
-    hidden var candidates = [];  // [scanResult, rssi, name, proven]: proven = advertises FTMS (or name filter)
+    // [scanResult, rssi, name, rank]. rank 2: advertises FTMS, matches the name filter or was already
+    // confirmed; 1: treadmill-like name; 0: blind probe (nothing in its advert, just a strong signal).
+    hidden var candidates = [];
     hidden var seen = [];        // every advertiser heard, for the diagnostic line: [scanResult, rssi, name, ms]
-    hidden var excluded = [];    // name guesses we connected to that turned out not to have FTMS
+    hidden var excluded = [];    // guesses we connected to that turned out not to have FTMS
+    hidden var confirmed = [];   // devices that turned out to be FTMS treadmills this session
     hidden var target = null;    // scan result of the device being connected
-    hidden var targetProven = false;
+    hidden var targetRank = 2;
+    hidden var targetRssi = 0;
+    hidden var reachedSetup = false;  // the current target showed the Treadmill Data characteristic
+    hidden var probes = 0;       // blind probes in the current search
     hidden var searchSince = 0;  // when the current search began (periodic scan restarts don't reset it)
 
     hidden var queue = [];       // [type, uuid, payload, tries]
@@ -171,13 +177,22 @@ class FtmsManager extends Ble.BleDelegate {
         if (link == LINK_REGISTERING) { return "Starting BLE"; }
         if (link == LINK_ERROR) { return problem; }
         if (link == LINK_SCANNING) {
-            if (candidates.size() == 0) {
+            var real = false;              // blind probes alone don't count as found
+            for (var i = 0; i < candidates.size(); i++) {
+                if (candidates[i][3] > 0) {
+                    real = true;
+                }
+            }
+            if (!real) {
                 if (Sys.getTimer() - searchSince < 10000) { return "Searching..."; }
                 var n = recentSeen().size();
                 return (n == 0) ? "No BLE devices" : "No FTMS (" + n + " seen)";
             }
             if (problem.length() > 0) { return problem; }
             return "Found " + candidates.size();
+        }
+        if ((link == LINK_CONNECTING || link == LINK_DISCOVERING) && targetRank == 0) {
+            return "Checking " + targetRssi;
         }
         if (link == LINK_CONNECTING) { return "Connecting"; }
         if (link == LINK_DISCOVERING || link == LINK_SETUP) { return "Setting up"; }
@@ -276,8 +291,10 @@ class FtmsManager extends Ble.BleDelegate {
     }
 
     hidden function startScan() {
-        if (link != LINK_SCANNING) {
+        if (link == LINK_REGISTERING || reachedSetup) {
             searchSince = Sys.getTimer();
+            reachedSetup = false;
+            probes = 0;
         }
         candidates = [];
         scanStart = Sys.getTimer();
@@ -347,9 +364,26 @@ class FtmsManager extends Ble.BleDelegate {
     }
 
     hidden function exclude(r) {
-        if (r != null && !isExcluded(r) && excluded.size() < 8) {
+        if (r != null && !isExcluded(r) && excluded.size() < 12) {
             excluded.add(r);
         }
+    }
+
+    hidden function isConfirmed(r) {
+        for (var i = 0; i < confirmed.size(); i++) {
+            if (r.isSameDevice(confirmed[i])) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // Garmin watches scan passively, so they never see the scan response, where many consoles
+    // (Matrix included) put their name and the FTMS service. After 10 s with nothing better, connect
+    // to the strongest devices one by one and keep the first one that has FTMS.
+    hidden function mayProbe(r) {
+        var rssi = r.getRssi();
+        return Sys.getTimer() - searchSince >= 10000 && probes < 6 && rssi >= -80 && rssi >= cfg.rssiMin;
     }
 
     hidden function noteSeen(r, name) {
@@ -403,7 +437,20 @@ class FtmsManager extends Ble.BleDelegate {
             }
         }
         if (a < 0) {
-            return list.size() > 0 ? "" + list.size() + " unnamed" : "";
+            if (list.size() == 0) {
+                return "";
+            }
+            var r1 = -999;
+            var r2 = -999;
+            for (var i = 0; i < list.size(); i++) {
+                if (list[i][1] > r1) {
+                    r2 = r1;
+                    r1 = list[i][1];
+                } else if (list[i][1] > r2) {
+                    r2 = list[i][1];
+                }
+            }
+            return "" + list.size() + " unnamed " + r1 + (r2 > -999 ? " " + r2 : "");
         }
         var s = shortName(list[a][2]) + " " + list[a][1];
         if (b >= 0) {
@@ -420,21 +467,21 @@ class FtmsManager extends Ble.BleDelegate {
         var best = null;
         var bestRssi = -999;
         var bestName = "";
-        var bestProven = false;
+        var bestRank = -1;
         for (var i = 0; i < candidates.size(); i++) {
             var c = candidates[i];
-            // a device that advertises FTMS always beats one only guessed from its name
-            if ((c[3] && !bestProven) || (c[3] == bestProven && c[1] > bestRssi)) {
+            // advertises FTMS > treadmill-like name > blind probe; then the strongest signal
+            if (c[3] > bestRank || (c[3] == bestRank && c[1] > bestRssi)) {
                 best = c[0];
                 bestRssi = c[1];
                 bestName = c[2];
-                bestProven = c[3];
+                bestRank = c[3];
             }
         }
         if (best == null) {
             return;
         }
-        if (!bestProven && Sys.getTimer() - scanStart < 8000) {
+        if (bestRank < 2 && Sys.getTimer() - scanStart < 8000) {
             return;                        // give real FTMS adverts a few seconds first
         }
         if (bestRssi < cfg.rssiMin) {
@@ -450,13 +497,21 @@ class FtmsManager extends Ble.BleDelegate {
         }
         if (device == null) {
             problem = "Pair failed";
+            if (bestRank == 0) {
+                exclude(best);             // a blind probe: move on to the next device
+            }
             startScan();
             return;
         }
         problem = "";
         deviceName = bestName;
         target = best;
-        targetProven = bestProven;
+        targetRank = bestRank;
+        targetRssi = bestRssi;
+        reachedSetup = false;
+        if (bestRank == 0) {
+            probes++;
+        }
         setLink(LINK_CONNECTING);
         if (device.isConnected()) {        // onConnectedStateChanged is not always called
             onLinkUp();
@@ -476,6 +531,9 @@ class FtmsManager extends Ble.BleDelegate {
 
     hidden function dropAndRescan(reason) {
         problem = reason;
+        if (!reachedSetup && targetRank == 0) {
+            exclude(target);               // a blind probe that never got as far as FTMS
+        }
         resetSession();
         unpairAll();
         startScan();
@@ -501,11 +559,15 @@ class FtmsManager extends Ble.BleDelegate {
             }
         }
         if (dataChar != null) {
+            reachedSetup = true;
+            if (target != null && !isConfirmed(target) && confirmed.size() < 4) {
+                confirmed.add(target);     // a later rescan connects straight to it
+            }
             buildSetupQueue();
             setLink(LINK_SETUP);
             pump();
         } else if (now - linkSince > 10000) {
-            if (!targetProven) {
+            if (targetRank < 2) {
                 exclude(target);           // a real FTMS treadmill may just be slow: try it again
             }
             dropAndRescan("No FTMS");
@@ -835,28 +897,42 @@ class FtmsManager extends Ble.BleDelegate {
                 continue;
             }
             var lname = name.toLower();
-            var proven = false;
+            var rank = 0;
             if (filter.length() > 0) {
                 if (lname.find(filter) == null) {
                     continue;
                 }
-                proven = true;             // the user named it: trust that
-            } else if (advertisesFtms(r)) {
-                proven = true;
-            } else if (!looksLikeTreadmill(lname)) {
+                rank = 2;                  // the user named it: trust that
+            } else if (isConfirmed(r) || advertisesFtms(r)) {
+                rank = 2;
+            } else if (looksLikeTreadmill(lname)) {
+                rank = 1;
+            } else if (!mayProbe(r)) {
                 continue;
             }
-            var known = false;
-            for (var i = 0; i < candidates.size(); i++) {
-                if (r.isSameDevice(candidates[i][0])) {
-                    candidates[i] = [r, r.getRssi(), name, proven];
-                    known = true;
-                    break;
-                }
+            addCandidate(r, name, rank);
+        }
+    }
+
+    // Keeps at most 8 candidates; when full, a better one replaces the worst.
+    hidden function addCandidate(r, name, rank) {
+        var entry = [r, r.getRssi(), name, rank];
+        var worst = -1;
+        for (var i = 0; i < candidates.size(); i++) {
+            var c = candidates[i];
+            if (r.isSameDevice(c[0])) {
+                candidates[i] = entry;
+                return;
             }
-            if (!known && candidates.size() < 8) {
-                candidates.add([r, r.getRssi(), name, proven]);
+            if (worst < 0 || c[3] < candidates[worst][3] ||
+                    (c[3] == candidates[worst][3] && c[1] < candidates[worst][1])) {
+                worst = i;
             }
+        }
+        if (candidates.size() < 8) {
+            candidates.add(entry);
+        } else if (rank > candidates[worst][3] || (rank == candidates[worst][3] && entry[1] > candidates[worst][1])) {
+            candidates[worst] = entry;
         }
     }
 

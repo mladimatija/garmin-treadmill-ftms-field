@@ -210,9 +210,11 @@ Not supported:
 1. Stand on the treadmill, clip on the safety key, start the belt from the console and walk at an
    easy speed. The console's Bluetooth must be on; on consoles with an "apps / Bluetooth connection"
    setting, enable it. **Matrix consoles: open the console's Bluetooth device-pairing screen
-   ("Pair device", デバイスのペアリング on Japanese consoles) and leave it open until the watch shows the
-   treadmill's name.** The console only announces itself over Bluetooth while that screen is showing.
-   Its "machine name" (マシン名) is the console's serial number, starting with `CTM`.
+   ("Pair device", デバイスのペアリング on Japanese consoles) and leave it open until the field shows the
+   belt speed.** The console only announces itself over Bluetooth while that screen is showing.
+   Its "machine name" (マシン名) is the console's serial number, starting with `CTM`, but the watch
+   can't see it (see `Checking` under [The screen](#the-screen)), so the field calls it just
+   "Treadmill". Finding it can take a minute or two.
 2. On the watch, start a Treadmill activity with a workout (fēnix: **START → Treadmill**, hold
    **MENU → Training → Workouts →** your workout **→ Do Workout**) and scroll to the field. Within a
    few seconds it shows `Searching...` → `Connecting` → the treadmill's name. It connects to the
@@ -242,6 +244,8 @@ Not supported:
 | `Starting BLE`, `Searching...`, `Found 5` | Looking for treadmills |
 | `No FTMS (6 seen)` + names below | After 10 s: the watch hears 6 Bluetooth devices, none of them a treadmill. The bottom line shows the two strongest with their signal, e.g. `iPhone -58  AirPods -70` |
 | `No BLE devices` | After 10 s: the watch hears nothing at all (watch Bluetooth off?) |
+| `16 unnamed -48 -55` (bottom line) | The watch hears 16 devices but none of their names; the numbers are the two strongest signals in dBm |
+| `Checking -58` | Garmin watches only read the first part of a Bluetooth announcement. Many consoles (Matrix included) put their name and the FTMS service in the second part (the scan response), which the watch never sees. So after 10 s the watch connects to the strongest nearby devices one by one (at most 6, signal −80 dBm or better) and keeps the first one that turns out to be a treadmill. A device that isn't one is skipped for the rest of the activity |
 | `Move closer` | Treadmills found, but all weaker than the signal limit |
 | `Connecting`, `Setting up`, `Reconnecting` | Setting up or restoring the link (it reconnects by itself) |
 | `AUTO` (green) | Following the workout |
@@ -306,7 +310,8 @@ the next person with the same machine.
 | `No FTMS (n seen)`, treadmill not in the names | The console isn't announcing itself: its Bluetooth or app connection is off or, on Matrix consoles, the device-pairing screen isn't open (see [Using it](#using-it)). Also check that no other phone or app is connected to it (FTMS allows one). |
 | Treadmill name shows in the bottom line but it never connects | Check with **nRF Connect** (phone app, *Scanner*): your treadmill should list *Services: Fitness Machine*. Don't tap *Connect* there, and close the app afterwards, or it holds the treadmill's one connection. |
 | `No BLE devices` | Restart the watch, and make sure its Bluetooth (phone connection) isn't switched off. |
-| Connects to the wrong treadmill | Put part of your treadmill's name (shown on the field; on Matrix consoles the last digits of the serial on the pairing screen) into *Only treadmills whose name contains*, or raise the signal limit to −65 dBm. |
+| Connects to the wrong treadmill | Raise the signal limit to −65 dBm so only the console you're standing at qualifies. *Only treadmills whose name contains* works only for consoles whose name the watch can see: Matrix consoles hide theirs, and with a name filter set the watch doesn't try unnamed devices at all. |
+| Stays on `No FTMS (n seen)` after several `Checking` tries | It tried the six strongest devices and none was a treadmill. Make sure the console's pairing screen is open and nothing else is connected to it, then stop and restart the activity to search again. |
 | `BLE busy` | Too many Bluetooth sensors or apps on the watch; remove another Connect IQ Bluetooth field from the screen. |
 | Speed is off by a factor of 1.6 | Turn on *Treadmill works in mph*. |
 | `REFUSED` with `Speed Refused` / `Incline Refused` | Some consoles want an FTMS start first; the field already sends one per step while the belt is moving. If the console still refuses, set that value by hand. |

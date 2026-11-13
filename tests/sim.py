@@ -40,7 +40,7 @@ class FakeTreadmill:
                  indications=True, split_packets=False, has_distance=True, chars=None,
                  control_allowed=True, accel=1.5, incline_rate=0.6, incline_step=0.0,
                  refuse_speed=False, discovery_delay=0, safety_instant=True,
-                 advert="uuids", ftms=True):
+                 advert="uuids", ftms=True, name_visible=True, connectable=True):
         self.name = name
         self.rssi = rssi
         self.target_bits = target_bits
@@ -61,6 +61,9 @@ class FakeTreadmill:
         self.connected_at = 0
         self.advert = advert                # how 0x1826 shows up: uuids / servicedata / raw / none
         self.ftms = ftms                    # False: some other Bluetooth device (no FTMS service)
+        self.name_visible = name_visible    # False: name only in the scan response, which Garmin never sees
+        self.connectable = connectable      # False: connection attempts never complete
+        self.pair_attempts = 0
         self.chars = chars or ["2acc", "2acd", "2ad4", "2ad5", "2ad9", "2ada"]
         self.connected = False
         self.notify = set()
@@ -214,7 +217,7 @@ class FakeTreadmill:
 class ScanResult:
     def __init__(self, machine):
         self.machine = machine
-        self.name = machine.name
+        self.name = machine.name if machine.name_visible else None
         self.rssi = machine.rssi
         adv = machine.advert if machine.ftms else "none"
         # what the watch firmware reports; "raw" = only visible in the raw advertising bytes
@@ -340,9 +343,10 @@ class FakeBle:
     def pairDevice(self, result):
         dev = FakeDevice(self, result.machine)
         self.paired.append(dev)
+        result.machine.pair_attempts += 1
 
         def connect():
-            if dev in self.paired:
+            if dev in self.paired and result.machine.connectable:
                 result.machine.connected = True
                 result.machine.connected_at = CLOCK.ms
                 self.delegate.onConnectedStateChanged(dev, L.CONNECTION_STATE_CONNECTED)

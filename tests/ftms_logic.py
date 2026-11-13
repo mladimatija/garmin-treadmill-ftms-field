@@ -593,11 +593,15 @@ class FtmsManager:
         self.linkSince = 0
         self.scanStart = 0
         self.scanning = False
-        self.candidates = []     # [scanResult, rssi, name, proven]
+        self.candidates = []     # [scanResult, rssi, name, rank] rank 2 FTMS/filter/confirmed, 1 name hint, 0 probe
         self.seen = []           # [scanResult, rssi, name, ms]
         self.excluded = []
+        self.confirmed = []
         self.target = None
-        self.targetProven = False
+        self.targetRank = 2
+        self.targetRssi = 0
+        self.reachedSetup = False
+        self.probes = 0
         self.searchSince = 0
         self.queue = []
         self.busy = False
@@ -676,12 +680,14 @@ class FtmsManager:
         if self.link == LINK_REGISTERING: return "Starting BLE"
         if self.link == LINK_ERROR: return self.problem
         if self.link == LINK_SCANNING:
-            if len(self.candidates) == 0:
+            if not any(c[3] > 0 for c in self.candidates):
                 if get_timer() - self.searchSince < 10000: return "Searching..."
                 n = len(self.recentSeen())
                 return "No BLE devices" if n == 0 else "No FTMS (%d seen)" % n
             if len(self.problem) > 0: return self.problem
             return "Found %d" % len(self.candidates)
+        if self.link in (LINK_CONNECTING, LINK_DISCOVERING) and self.targetRank == 0:
+            return "Checking %d" % self.targetRssi
         if self.link == LINK_CONNECTING: return "Connecting"
         if self.link in (LINK_DISCOVERING, LINK_SETUP): return "Setting up"
         if self.link == LINK_RECONNECTING: return "Reconnecting"
@@ -744,8 +750,10 @@ class FtmsManager:
             self.setLink(LINK_ERROR)
 
     def startScan(self):
-        if self.link != LINK_SCANNING:
+        if self.link == LINK_REGISTERING or self.reachedSetup:
             self.searchSince = get_timer()
+            self.reachedSetup = False
+            self.probes = 0
         self.candidates = []
         self.scanStart = get_timer()
         self.device = None
@@ -778,8 +786,15 @@ class FtmsManager:
         return any(r.isSameDevice(x) for x in self.excluded)
 
     def exclude(self, r):
-        if r is not None and not self.isExcluded(r) and len(self.excluded) < 8:
+        if r is not None and not self.isExcluded(r) and len(self.excluded) < 12:
             self.excluded.append(r)
+
+    def isConfirmed(self, r):
+        return any(r.isSameDevice(x) for x in self.confirmed)
+
+    def mayProbe(self, r):
+        return (get_timer() - self.searchSince >= 10000 and self.probes < 6
+                and r.rssi >= -80 and r.rssi >= self.cfg.rssiMin)
 
     def noteSeen(self, r, name):
         now = get_timer()
@@ -813,7 +828,10 @@ class FtmsManager:
             elif b < 0 or e[1] > lst[b][1]:
                 b = i
         if a < 0:
-            return ("%d unnamed" % len(lst)) if len(lst) > 0 else ""
+            if len(lst) == 0:
+                return ""
+            rs = sorted((e[1] for e in lst), reverse=True)[:2]
+            return "%d unnamed " % len(lst) + " ".join(str(x) for x in rs)
         s = self.shortName(lst[a][2]) + " " + str(lst[a][1])
         if b >= 0:
             s += "  " + self.shortName(lst[b][2]) + " " + str(lst[b][1])
@@ -824,13 +842,13 @@ class FtmsManager:
         return n[0:10] if len(n) > 10 else n
 
     def connectBest(self):
-        best, bestRssi, bestName, bestProven = None, -999, "", False
+        best, bestRssi, bestName, bestRank = None, -999, "", -1
         for c in self.candidates:
-            if (c[3] and not bestProven) or (c[3] == bestProven and c[1] > bestRssi):
-                best, bestRssi, bestName, bestProven = c
+            if c[3] > bestRank or (c[3] == bestRank and c[1] > bestRssi):
+                best, bestRssi, bestName, bestRank = c
         if best is None:
             return
-        if not bestProven and get_timer() - self.scanStart < 8000:
+        if bestRank < 2 and get_timer() - self.scanStart < 8000:
             return
         if bestRssi < self.cfg.rssiMin:
             self.problem = "Move closer"
@@ -843,12 +861,18 @@ class FtmsManager:
             self.device = None
         if self.device is None:
             self.problem = "Pair failed"
+            if bestRank == 0:
+                self.exclude(best)
             self.startScan()
             return
         self.problem = ""
         self.deviceName = bestName
         self.target = best
-        self.targetProven = bestProven
+        self.targetRank = bestRank
+        self.targetRssi = bestRssi
+        self.reachedSetup = False
+        if bestRank == 0:
+            self.probes += 1
         self.setLink(LINK_CONNECTING)
         if self.device.isConnected():
             self.onLinkUp()
@@ -864,6 +888,8 @@ class FtmsManager:
 
     def dropAndRescan(self, reason):
         self.problem = reason
+        if not self.reachedSetup and self.targetRank == 0:
+            self.exclude(self.target)
         self.resetSession()
         self.unpairAll()
         self.startScan()
@@ -872,11 +898,14 @@ class FtmsManager:
         svc = self.device.getService(self.svcUuid) if self.device is not None else None
         dataChar = svc.getCharacteristic(self.dataUuid) if svc is not None else None
         if dataChar is not None:
+            self.reachedSetup = True
+            if self.target is not None and not self.isConfirmed(self.target) and len(self.confirmed) < 4:
+                self.confirmed.append(self.target)
             self.buildSetupQueue()
             self.setLink(LINK_SETUP)
             self.pump()
         elif now - self.linkSince > 10000:
-            if not self.targetProven:
+            if self.targetRank < 2:
                 self.exclude(self.target)
             self.dropAndRescan("No FTMS")
 
@@ -1101,23 +1130,33 @@ class FtmsManager:
             if self.isExcluded(r):
                 continue
             lname = name.lower()
-            proven = False
+            rank = 0
             if len(flt) > 0:
                 if lname.find(flt) < 0:
                     continue
-                proven = True
-            elif self.advertisesFtms(r):
-                proven = True
-            elif not self.looksLikeTreadmill(lname):
+                rank = 2
+            elif self.isConfirmed(r) or self.advertisesFtms(r):
+                rank = 2
+            elif self.looksLikeTreadmill(lname):
+                rank = 1
+            elif not self.mayProbe(r):
                 continue
-            known = False
-            for i, c in enumerate(self.candidates):
-                if r.isSameDevice(c[0]):
-                    self.candidates[i] = [r, r.rssi, name, proven]
-                    known = True
-                    break
-            if not known and len(self.candidates) < 8:
-                self.candidates.append([r, r.rssi, name, proven])
+            self.addCandidate(r, name, rank)
+
+    def addCandidate(self, r, name, rank):
+        entry = [r, r.rssi, name, rank]
+        worst = -1
+        for i, c in enumerate(self.candidates):
+            if r.isSameDevice(c[0]):
+                self.candidates[i] = entry
+                return
+            w = self.candidates[worst] if worst >= 0 else None
+            if worst < 0 or c[3] < w[3] or (c[3] == w[3] and c[1] < w[1]):
+                worst = i
+        if len(self.candidates) < 8:
+            self.candidates.append(entry)
+        elif rank > self.candidates[worst][3] or (rank == self.candidates[worst][3] and entry[1] > self.candidates[worst][1]):
+            self.candidates[worst] = entry
 
     def onConnectedStateChanged(self, dev, state):
         if state == CONNECTION_STATE_CONNECTED:

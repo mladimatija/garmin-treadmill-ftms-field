@@ -568,16 +568,78 @@ class TestSessions(unittest.TestCase):
         self.assertEqual(w.mgr.excluded, [])
 
     def test_diagnostics_when_no_treadmill_advertises(self):
-        phone = sim.FakeTreadmill(name="iPhone", rssi=-50, advert="none", ftms=False)
-        pods = sim.FakeTreadmill(name="AirPods Pro 2", rssi=-62, advert="none", ftms=False)
+        # too far away to be worth a blind probe
+        phone = sim.FakeTreadmill(name="iPhone", rssi=-82, advert="none", ftms=False)
+        pods = sim.FakeTreadmill(name="AirPods Pro 2", rssi=-86, advert="none", ftms=False)
         w = sim.Watch([phone, pods])
         w.run(5)
         self.assertEqual(w.mgr.statusText(), "Searching...")
         w.run(10)
         self.assertEqual(w.mgr.statusText(), "No FTMS (2 seen)")
-        self.assertEqual(w.mgr.diagText(), "iPhone -50  AirPods Pr -62")
+        self.assertEqual(w.mgr.diagText(), "iPhone -82  AirPods Pr -86")
         w.run(60)
-        self.assertFalse(phone.connected or pods.connected)
+        self.assertEqual(phone.pair_attempts + pods.pair_attempts, 0)
+
+    def test_matrix_console_with_name_and_ftms_only_in_scan_response(self):
+        # what a Matrix console looks like from the watch: no names, nothing FTMS in the adverts.
+        # The console is found by connecting to the strongest devices one by one.
+        phone = sim.FakeTreadmill(name="iPhone", rssi=-48, advert="none", ftms=False,
+                                  name_visible=False, connectable=False)
+        band = sim.FakeTreadmill(name="Band", rssi=-55, advert="none", ftms=False, name_visible=False)
+        console = sim.FakeTreadmill(name="CTM551L0000K00001", rssi=-60, advert="none", name_visible=False)
+        far = [sim.FakeTreadmill(name="x%d" % i, rssi=-84 - i, advert="none", ftms=False, name_visible=False)
+               for i in range(5)]
+        w = sim.Watch([phone, band, console] + far)
+        w.run(9)
+        self.assertEqual(w.mgr.statusText(), "Searching...")
+        self.assertEqual(w.mgr.diagText(), "8 unnamed -48 -55")
+        w.run(4)
+        self.assertEqual(w.mgr.statusText(), "Checking -48")
+        w.run(120)
+        self.assertTrue(w.mgr.isReady(), w.mgr.statusText())
+        self.assertTrue(console.connected)
+        self.assertEqual(phone.pair_attempts, 1)      # tried once, then left alone
+        self.assertEqual(band.pair_attempts, 1)
+        self.assertEqual(sum(m.pair_attempts for m in far), 0)
+        self.assertEqual(w.mgr.statusText(), "Treadmill")
+
+    def test_name_matched_console_is_retried_after_connect_timeout(self):
+        # e.g. a phone held the console's one connection for a moment
+        m = sim.FakeTreadmill(name="CTM551L0000K00001", rssi=-60, advert="none", connectable=False)
+        w = sim.Watch([m])
+        w.run(40)
+        self.assertFalse(w.mgr.isReady())
+        m.connectable = True
+        w.run(60)
+        self.assertTrue(w.mgr.isReady(), w.mgr.statusText())
+        self.assertEqual(w.mgr.excluded, [])
+
+    def test_confirmed_console_reconnects_without_probing_again(self):
+        phone = sim.FakeTreadmill(name="p", rssi=-48, advert="none", ftms=False, name_visible=False)
+        console = sim.FakeTreadmill(name="c", rssi=-60, advert="none", name_visible=False)
+        w = sim.Watch([phone, console])
+        w.run(120)
+        self.assertTrue(w.mgr.isReady())
+        console.on_disconnect()                     # the console drops the link (e.g. its session ends)
+        w.run(60)
+        self.assertTrue(w.mgr.isReady(), w.mgr.statusText())
+        self.assertEqual(phone.pair_attempts, 1)
+
+    def test_probing_stops_after_six_devices(self):
+        devs = [sim.FakeTreadmill(name="d%d" % i, rssi=-50 - i, advert="none", ftms=False, name_visible=False)
+                for i in range(9)]
+        w = sim.Watch(devs)
+        w.run(400)
+        self.assertEqual(sum(m.pair_attempts for m in devs), 6)
+        self.assertFalse(w.mgr.isReady())
+        self.assertEqual(w.mgr.statusText(), "No FTMS (9 seen)")
+
+    def test_name_filter_turns_probing_off(self):
+        console = sim.FakeTreadmill(name="c", rssi=-60, advert="none", name_visible=False)
+        cfg = L.FieldSettings(nameFilter="00001")
+        w = sim.Watch([console], None, cfg)
+        w.run(90)
+        self.assertEqual(console.pair_attempts, 0)
 
     def test_diagnostics_when_nothing_in_range(self):
         w = sim.Watch([])
