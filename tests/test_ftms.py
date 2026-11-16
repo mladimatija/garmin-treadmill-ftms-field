@@ -783,6 +783,14 @@ class TestSessions(unittest.TestCase):
         self.assertEqual(w.follower.refusedText(), "Speed Not supported")
         self.assertAlmostEqual(m.incline, 1.0, places=1)
 
+    def test_found_count_leaves_out_blind_probes(self):
+        w = sim.Watch([])
+        w.run(2)
+        probe = sim.ScanResult(sim.FakeTreadmill(name="x"))
+        guess = sim.ScanResult(sim.FakeTreadmill(name="MATRIX-1"))
+        w.mgr.candidates = [[probe, -50, "", 0], [guess, -60, "MATRIX-1", 1]]
+        self.assertEqual(w.mgr.statusText(), "Found 1")
+
 
 if __name__ == "__main__":
     unittest.main()

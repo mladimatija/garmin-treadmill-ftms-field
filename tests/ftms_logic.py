@@ -694,12 +694,13 @@ class FtmsManager:
         if self.link == LINK_REGISTERING: return "Starting BLE"
         if self.link == LINK_ERROR: return self.problem
         if self.link == LINK_SCANNING:
-            if not any(c[3] > 0 for c in self.candidates):
+            real = sum(1 for c in self.candidates if c[3] > 0)
+            if real == 0:
                 if get_timer() - self.searchSince < 10000: return "Searching..."
                 n = len(self.recentSeen())
                 return "No BLE devices" if n == 0 else "No FTMS (%d seen)" % n
             if len(self.problem) > 0: return self.problem
-            return "Found %d" % len(self.candidates)
+            return "Found %d" % real
         if self.link in (LINK_CONNECTING, LINK_DISCOVERING) and self.targetRank == 0:
             return "Checking %d" % self.targetRssi
         if self.link == LINK_CONNECTING: return "Connecting"

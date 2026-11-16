@@ -180,19 +180,19 @@ class FtmsManager extends Ble.BleDelegate {
         if (link == LINK_REGISTERING) { return "Starting BLE"; }
         if (link == LINK_ERROR) { return problem; }
         if (link == LINK_SCANNING) {
-            var real = false;              // blind probes alone don't count as found
+            var real = 0;                  // blind probes don't count as found
             for (var i = 0; i < candidates.size(); i++) {
                 if (candidates[i][3] > 0) {
-                    real = true;
+                    real += 1;
                 }
             }
-            if (!real) {
+            if (real == 0) {
                 if (Sys.getTimer() - searchSince < 10000) { return "Searching..."; }
                 var n = recentSeen().size();
                 return (n == 0) ? "No BLE devices" : "No FTMS (" + n + " seen)";
             }
             if (problem.length() > 0) { return problem; }
-            return "Found " + candidates.size();
+            return "Found " + real;
         }
         if ((link == LINK_CONNECTING || link == LINK_DISCOVERING) && targetRank == 0) {
             return "Checking " + targetRssi;
