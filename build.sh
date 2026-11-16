@@ -57,7 +57,14 @@ build_one() {
 }
 export -f build_one
 
-echo "Building ${#devices[@]} watch(es), $jobs at a time..."
+if [[ ${#devices[@]} -lt $jobs ]]; then
+    jobs=${#devices[@]}
+fi
+if [[ ${#devices[@]} -eq 1 ]]; then
+    echo "Building ${devices[0]}..."
+else
+    echo "Building ${#devices[@]} watches, $jobs at a time..."
+fi
 # shellcheck disable=SC2016  # $1 is expanded by the child bash, not here
 results=$(printf '%s\n' "${devices[@]}" | xargs -P "$jobs" -n 1 bash -c 'build_one "$1"' _)
 sort <<< "$results"
