@@ -10,6 +10,7 @@
   <a href="https://github.com/mladimatija/garmin-treadmill-ftms-field/releases"><img src="https://img.shields.io/github/downloads/mladimatija/garmin-treadmill-ftms-field/total?label=downloads" alt="Downloads"></a>
   <a href="#supported-watches"><img src="https://img.shields.io/badge/watches-93-informational" alt="93 watches"></a>
   <a href="LICENSE.md"><img src="https://img.shields.io/badge/license-PolyForm%20Noncommercial-blue" alt="License: PolyForm Noncommercial"></a>
+  <a href="https://ko-fi.com/D1D51ZGOQK"><img src="https://img.shields.io/badge/Ko--fi-Support-FF5E5B?logo=ko-fi&logoColor=white" alt="Support on Ko-fi"></a>
 </p>
 
 <p align="center">
@@ -46,6 +47,7 @@ It was written for Matrix treadmills with the Touch console.
 - [Development](#development)
 - [Releasing](#releasing)
 - [Known limitations](#known-limitations)
+- [Like this?](#like-this)
 - [Disclaimer](#disclaimer)
 - [License](#license)
 
@@ -410,6 +412,14 @@ workflows use. When Garmin changes the agreement, the build stops until the new 
 - Whether a console accepts speed and incline commands over FTMS, not just sharing its data, can only
   be found out on the machine. The field detects it and falls back to read-only.
 - A data field only sees the current workout step, and can't change the watch's own distance or pace.
+
+## Like this?
+
+If the field makes your treadmill runs easier:
+
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/D1D51ZGOQK)
+
+Free either way.
 
 ## Disclaimer
 

@@ -3,3 +3,6 @@ contact_links:
   - name: Installation and usage
     url: https://github.com/mladimatija/garmin-treadmill-ftms-field#install
     about: Installing the field, supported watches, settings and troubleshooting.
+  - name: Support on Ko-fi
+    url: https://ko-fi.com/D1D51ZGOQK
+    about: If the field makes your treadmill runs easier, you can buy me a coffee.
