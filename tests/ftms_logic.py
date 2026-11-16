@@ -1193,6 +1193,10 @@ class FtmsManager:
                 self.onLinkUp()
         elif self.link in (LINK_DISCOVERING, LINK_SETUP, LINK_READY):
             self.onLinkDown()
+        elif self.link == LINK_CONNECTING and dev is not None and dev is self.device:
+            now = get_timer()
+            if now - self.linkSince < 10000:
+                self.linkSince = now - 10000
 
     def onCharacteristicRead(self, ch, status, value):
         self.busy = False

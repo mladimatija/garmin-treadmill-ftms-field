@@ -965,6 +965,13 @@ class FtmsManager extends Ble.BleDelegate {
             }
         } else if (link == LINK_DISCOVERING || link == LINK_SETUP || link == LINK_READY) {
             onLinkDown();
+        } else if (link == LINK_CONNECTING && dev != null && dev == device) {
+            // The attempt failed. The stack may still retry by itself, so don't give up at
+            // once: let the connect timeout run out within 5 s instead of 15.
+            var now = Sys.getTimer();
+            if (now - linkSince < 10000) {
+                linkSince = now - 10000;
+            }
         }
     }
 

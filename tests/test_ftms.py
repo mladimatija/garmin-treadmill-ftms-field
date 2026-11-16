@@ -755,6 +755,13 @@ class TestSessions(unittest.TestCase):
         self.assertFalse(w.st.isFresh())
         self.assertEqual(w.mgr.problem, "Notify failed")
 
+    def test_refused_connection_is_given_up_sooner(self):
+        m = sim.FakeTreadmill(rejects=True)
+        w = sim.Watch([m])
+        w.run(18)                                     # a 15 s timeout would still be waiting
+        self.assertGreaterEqual(m.pair_attempts, 2)
+        self.assertEqual(w.mgr.excluded, [])
+
 
 if __name__ == "__main__":
     unittest.main()

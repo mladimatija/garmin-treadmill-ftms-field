@@ -40,7 +40,7 @@ class FakeTreadmill:
                  indications=True, split_packets=False, has_distance=True, chars=None,
                  control_allowed=True, accel=1.5, incline_rate=0.6, incline_step=0.0,
                  refuse_speed=False, discovery_delay=0, safety_instant=True,
-                 advert="uuids", ftms=True, name_visible=True, connectable=True,
+                 advert="uuids", ftms=True, name_visible=True, connectable=True, rejects=False,
                  cccd_failures=0, lost_responses=0, service_delay=0):
         self.name = name
         self.rssi = rssi
@@ -64,6 +64,7 @@ class FakeTreadmill:
         self.ftms = ftms                    # False: some other Bluetooth device (no FTMS service)
         self.name_visible = name_visible    # False: name only in the scan response, which Garmin never sees
         self.connectable = connectable      # False: connection attempts never complete
+        self.rejects = rejects              # True: connection attempts fail with a "disconnected" callback
         self.cccd_failures = cccd_failures  # this many notification set-ups fail before they work
         self.lost_responses = lost_responses  # this many Control Point responses never arrive
         self.service_delay = service_delay  # ms after connecting before even the service appears
@@ -357,7 +358,9 @@ class FakeBle:
         result.machine.pair_attempts += 1
 
         def connect():
-            if dev in self.paired and result.machine.connectable:
+            if dev in self.paired and result.machine.rejects:
+                self.delegate.onConnectedStateChanged(dev, L.CONNECTION_STATE_DISCONNECTED)
+            elif dev in self.paired and result.machine.connectable:
                 result.machine.connected = True
                 result.machine.connected_at = CLOCK.ms
                 self.delegate.onConnectedStateChanged(dev, L.CONNECTION_STATE_CONNECTED)
