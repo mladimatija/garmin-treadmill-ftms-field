@@ -607,6 +607,7 @@ class FtmsManager:
         self.candidates = []     # [scanResult, rssi, name, rank] rank 2 FTMS/filter/confirmed, 1 name hint, 0 probe
         self.seen = []           # [scanResult, rssi, name, ms]
         self.excluded = []
+        self.doubted = []        # name guesses whose first setup timed out: one more try, then excluded
         self.confirmed = []
         self.target = None
         self.targetRank = 2
@@ -719,6 +720,8 @@ class FtmsManager:
             if self.device is not None and self.device.isConnected():
                 self.onLinkUp()
             elif now - self.linkSince > 15000:
+                if self.targetRank == 0:
+                    self.exclude(self.target)
                 self.dropAndRescan("Connect timeout")
         elif self.link == LINK_DISCOVERING:
             self.discover(now)
@@ -731,6 +734,8 @@ class FtmsManager:
             if self.device is not None and self.device.isConnected():
                 self.onLinkUp()
             elif now - self.linkSince > 10000:
+                if self.targetRank == 0 and not self.reachedSetup:
+                    self.exclude(self.target)
                 self.dropAndRescan("Lost link")
 
     # link
@@ -793,15 +798,16 @@ class FtmsManager:
             return True
         return any(lname.find(h) >= 0 for h in self.HINTS)
 
-    def isExcluded(self, r):
-        return any(r.isSameDevice(x) for x in self.excluded)
+    @staticmethod
+    def contains(lst, r):
+        return any(r.isSameDevice(x) for x in lst)
+
+    def remember(self, lst, r, mx):
+        if r is not None and not self.contains(lst, r) and len(lst) < mx:
+            lst.append(r)
 
     def exclude(self, r):
-        if r is not None and not self.isExcluded(r) and len(self.excluded) < 12:
-            self.excluded.append(r)
-
-    def isConfirmed(self, r):
-        return any(r.isSameDevice(x) for x in self.confirmed)
+        self.remember(self.excluded, r, 12)
 
     def mayProbe(self, r):
         return (get_timer() - self.searchSince >= 10000 and self.probes < 6
@@ -899,8 +905,6 @@ class FtmsManager:
 
     def dropAndRescan(self, reason):
         self.problem = reason
-        if not self.reachedSetup and self.targetRank == 0:
-            self.exclude(self.target)
         self.resetSession()
         self.unpairAll()
         self.startScan()
@@ -910,14 +914,16 @@ class FtmsManager:
         dataChar = svc.getCharacteristic(self.dataUuid) if svc is not None else None
         if dataChar is not None:
             self.reachedSetup = True
-            if self.target is not None and not self.isConfirmed(self.target) and len(self.confirmed) < 4:
-                self.confirmed.append(self.target)
+            self.remember(self.confirmed, self.target, 4)
             self.buildSetupQueue()
             self.setLink(LINK_SETUP)
             self.pump()
         elif now - self.linkSince > 10000:
-            if self.targetRank < 2:
-                self.exclude(self.target)
+            if svc is None and self.target is not None:
+                if self.targetRank == 0 or (self.targetRank == 1 and self.contains(self.doubted, self.target)):
+                    self.exclude(self.target)
+                elif self.targetRank == 1:
+                    self.remember(self.doubted, self.target, 12)
             self.dropAndRescan("No FTMS")
 
     def resetSession(self):
@@ -1138,7 +1144,7 @@ class FtmsManager:
         for r in results:
             name = r.name or ""
             self.noteSeen(r, name)
-            if self.isExcluded(r):
+            if self.contains(self.excluded, r):
                 continue
             lname = name.lower()
             rank = 0
@@ -1146,7 +1152,7 @@ class FtmsManager:
                 if lname.find(flt) < 0:
                     continue
                 rank = 2
-            elif self.isConfirmed(r) or self.advertisesFtms(r):
+            elif self.contains(self.confirmed, r) or self.advertisesFtms(r):
                 rank = 2
             elif self.looksLikeTreadmill(lname):
                 rank = 1

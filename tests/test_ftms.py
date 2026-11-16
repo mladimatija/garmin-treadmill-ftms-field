@@ -684,6 +684,34 @@ class TestSessions(unittest.TestCase):
         self.assertEqual(w.commands(m), [])
         self.assertGreater(w.st.sessDist, 250)
 
+    def test_slow_matrix_console_found_by_name_is_retried(self):
+        # the FTMS service shows up at once, its characteristics only after the setup timeout
+        m = sim.FakeTreadmill(name="CTM551L0000K00001", rssi=-60, advert="none", discovery_delay=12000)
+        w = sim.Watch([m])
+        w.run(40)
+        self.assertFalse(w.mgr.isReady())
+        m.discovery_delay = 0
+        w.run(40)
+        self.assertTrue(w.mgr.isReady(), w.mgr.statusText())
+        self.assertEqual(w.mgr.excluded, [])
+
+    def test_name_guess_gets_a_second_try_when_nothing_answers(self):
+        m = sim.FakeTreadmill(name="CTM551L0000K00001", rssi=-60, advert="none", service_delay=12000)
+        w = sim.Watch([m])
+        w.run(25)                                     # first setup times out without a service
+        self.assertFalse(w.mgr.isReady())
+        self.assertEqual(w.mgr.excluded, [])
+        m.service_delay = 0
+        w.run(40)
+        self.assertTrue(w.mgr.isReady(), w.mgr.statusText())
+
+    def test_name_guess_without_ftms_is_dropped_after_two_tries(self):
+        bike = sim.FakeTreadmill(name="Matrix Bike", rssi=-50, advert="none", ftms=False)
+        w = sim.Watch([bike])
+        w.run(120)
+        self.assertEqual(bike.pair_attempts, 2)
+        self.assertEqual(len(w.mgr.excluded), 1)
+
 
 if __name__ == "__main__":
     unittest.main()

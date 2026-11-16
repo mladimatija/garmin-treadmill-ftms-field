@@ -40,7 +40,8 @@ class FakeTreadmill:
                  indications=True, split_packets=False, has_distance=True, chars=None,
                  control_allowed=True, accel=1.5, incline_rate=0.6, incline_step=0.0,
                  refuse_speed=False, discovery_delay=0, safety_instant=True,
-                 advert="uuids", ftms=True, name_visible=True, connectable=True):
+                 advert="uuids", ftms=True, name_visible=True, connectable=True,
+                 service_delay=0):
         self.name = name
         self.rssi = rssi
         self.target_bits = target_bits
@@ -63,6 +64,7 @@ class FakeTreadmill:
         self.ftms = ftms                    # False: some other Bluetooth device (no FTMS service)
         self.name_visible = name_visible    # False: name only in the scan response, which Garmin never sees
         self.connectable = connectable      # False: connection attempts never complete
+        self.service_delay = service_delay  # ms after connecting before even the service appears
         self.pair_attempts = 0
         self.chars = chars or ["2acc", "2acd", "2ad4", "2ad5", "2ad9", "2ada"]
         self.connected = False
@@ -308,7 +310,8 @@ class FakeDevice:
         return self.machine.connected
 
     def getService(self, uuid):
-        if self.machine.connected and uuid == "1826" and self.machine.ftms:
+        m = self.machine
+        if m.connected and uuid == "1826" and m.ftms and CLOCK.ms >= m.connected_at + m.service_delay:
             return FakeService(self)
         return None
 

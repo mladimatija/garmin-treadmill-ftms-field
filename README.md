@@ -245,7 +245,7 @@ Not supported:
 | `No FTMS (6 seen)` + names below | After 10 s: the watch hears 6 Bluetooth devices, none of them a treadmill. The bottom line shows the two strongest with their signal, e.g. `iPhone -58  AirPods -70` |
 | `No BLE devices` | After 10 s: the watch hears nothing at all (watch Bluetooth off?) |
 | `16 unnamed -48 -55` (bottom line) | The watch hears 16 devices but none of their names; the numbers are the two strongest signals in dBm |
-| `Checking -58` | Garmin watches only read the first part of a Bluetooth announcement. Many consoles (Matrix included) put their name and the FTMS service in the second part (the scan response), which the watch never sees. So after 10 s the watch connects to the strongest nearby devices one by one (at most 6, signal −80 dBm or better) and keeps the first one that turns out to be a treadmill. A device that isn't one is skipped for the rest of the activity |
+| `Checking -58` | Garmin watches only read the first part of a Bluetooth announcement. Many consoles (Matrix included) put their name and the FTMS service in the second part (the scan response), which the watch never sees. So after 10 s the watch connects to the strongest nearby devices one by one (at most 6, signal −80 dBm or better) and keeps the first one that turns out to be a treadmill. A device that isn't one is skipped for the rest of the activity. A device with a treadmill-like name gets a second try first, in case the console was just slow |
 | `Move closer` | Treadmills found, but all weaker than the signal limit |
 | `Connecting`, `Setting up`, `Reconnecting` | Setting up or restoring the link (it reconnects by itself) |
 | `AUTO` (green) | Following the workout |

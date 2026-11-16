@@ -59,6 +59,7 @@ class FtmsManager extends Ble.BleDelegate {
     hidden var candidates = [];
     hidden var seen = [];        // every advertiser heard, for the diagnostic line: [scanResult, rssi, name, ms]
     hidden var excluded = [];    // guesses we connected to that turned out not to have FTMS
+    hidden var doubted = [];     // name guesses whose first setup timed out: one more try, then excluded
     hidden var confirmed = [];   // devices that turned out to be FTMS treadmills this session
     hidden var target = null;    // scan result of the device being connected
     hidden var targetRank = 2;
@@ -218,6 +219,9 @@ class FtmsManager extends Ble.BleDelegate {
             if (device != null && device.isConnected()) {
                 onLinkUp();
             } else if (now - linkSince > 15000) {
+                if (targetRank == 0) {
+                    exclude(target);       // a blind probe that never connected: move on
+                }
                 dropAndRescan("Connect timeout");
             }
         } else if (link == LINK_DISCOVERING) {
@@ -232,6 +236,9 @@ class FtmsManager extends Ble.BleDelegate {
             if (device != null && device.isConnected()) {
                 onLinkUp();
             } else if (now - linkSince > 10000) {
+                if (targetRank == 0 && !reachedSetup) {
+                    exclude(target);       // a blind probe that dropped before showing FTMS
+                }
                 dropAndRescan("Lost link");
             }
         }
@@ -354,28 +361,25 @@ class FtmsManager extends Ble.BleDelegate {
         return false;
     }
 
-    hidden function isExcluded(r) {
-        for (var i = 0; i < excluded.size(); i++) {
-            if (r.isSameDevice(excluded[i])) {
+    // Is scan result r (the same device) in list?
+    hidden function contains(list, r) {
+        for (var i = 0; i < list.size(); i++) {
+            if (r.isSameDevice(list[i])) {
                 return true;
             }
         }
         return false;
+    }
+
+    // Adds r to list once, up to max entries.
+    hidden function remember(list, r, max) {
+        if (r != null && !contains(list, r) && list.size() < max) {
+            list.add(r);
+        }
     }
 
     hidden function exclude(r) {
-        if (r != null && !isExcluded(r) && excluded.size() < 12) {
-            excluded.add(r);
-        }
-    }
-
-    hidden function isConfirmed(r) {
-        for (var i = 0; i < confirmed.size(); i++) {
-            if (r.isSameDevice(confirmed[i])) {
-                return true;
-            }
-        }
-        return false;
+        remember(excluded, r, 12);
     }
 
     // Garmin watches scan passively, so they never see the scan response, where many consoles
@@ -531,9 +535,6 @@ class FtmsManager extends Ble.BleDelegate {
 
     hidden function dropAndRescan(reason) {
         problem = reason;
-        if (!reachedSetup && targetRank == 0) {
-            exclude(target);               // a blind probe that never got as far as FTMS
-        }
         resetSession();
         unpairAll();
         startScan();
@@ -560,15 +561,20 @@ class FtmsManager extends Ble.BleDelegate {
         }
         if (dataChar != null) {
             reachedSetup = true;
-            if (target != null && !isConfirmed(target) && confirmed.size() < 4) {
-                confirmed.add(target);     // a later rescan connects straight to it
-            }
+            remember(confirmed, target, 4);   // a later rescan connects straight to it
             buildSetupQueue();
             setLink(LINK_SETUP);
             pump();
         } else if (now - linkSince > 10000) {
-            if (targetRank < 2) {
-                exclude(target);           // a real FTMS treadmill may just be slow: try it again
+            // The FTMS service showed up: a real treadmill that is slow to set up, try it again.
+            // Nothing at all: a blind probe is dropped, a name guess gets one more try (a console
+            // can be slow the first time), an advertised FTMS treadmill is always tried again.
+            if (svc == null && target != null) {
+                if (targetRank == 0 || (targetRank == 1 && contains(doubted, target))) {
+                    exclude(target);
+                } else if (targetRank == 1) {
+                    remember(doubted, target, 12);
+                }
             }
             dropAndRescan("No FTMS");
         }
@@ -893,7 +899,7 @@ class FtmsManager extends Ble.BleDelegate {
                 name = "";
             }
             noteSeen(r, name);
-            if (isExcluded(r)) {
+            if (contains(excluded, r)) {
                 continue;
             }
             var lname = name.toLower();
@@ -903,7 +909,7 @@ class FtmsManager extends Ble.BleDelegate {
                     continue;
                 }
                 rank = 2;                  // the user named it: trust that
-            } else if (isConfirmed(r) || advertisesFtms(r)) {
+            } else if (contains(confirmed, r) || advertisesFtms(r)) {
                 rank = 2;
             } else if (looksLikeTreadmill(lname)) {
                 rank = 1;
