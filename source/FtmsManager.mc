@@ -75,6 +75,7 @@ class FtmsManager extends Ble.BleDelegate {
     hidden var cpWaiting = -1;   // op code waiting for its Control Point response
     hidden var cpSince = 0;
     hidden var noIndications = false;
+    hidden var cpTimeouts = 0;   // Control Point responses missed in a row
     hidden var controlRequested = false;
     hidden var notPermittedRetries = 0;
     hidden var resumeTried = false;
@@ -611,6 +612,7 @@ class FtmsManager extends Ble.BleDelegate {
     hidden function buildSetupQueue() {
         queue = [];
         noIndications = false;
+        cpTimeouts = 0;
         if (profileLevel == 3) {
             queue.add([OP_READ, featUuid, null, 0]);
             queue.add([OP_READ, speedRangeUuid, null, 0]);
@@ -703,7 +705,10 @@ class FtmsManager extends Ble.BleDelegate {
             }
             var op = cpWaiting;
             cpWaiting = -1;
-            noIndications = true;          // this machine does not send responses
+            cpTimeouts += 1;
+            if (cpTimeouts >= 2) {
+                noIndications = true;      // this machine does not send responses
+            }
             onCpResult(op, -1);
         }
         while (queue.size() > 0) {
@@ -1012,6 +1017,8 @@ class FtmsManager extends Ble.BleDelegate {
             Ftms.parseTreadmillData(value, st, cfg.mphMode);
         } else if (u.equals(cpUuid)) {
             if (value.size() >= 3 && value[0] == Ftms.CP_RESPONSE) {
+                cpTimeouts = 0;
+                noIndications = false;     // it does answer after all: wait for the answers again
                 onCpResult(value[1], value[2]);
                 pump();
             }

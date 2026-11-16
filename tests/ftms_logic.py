@@ -622,6 +622,7 @@ class FtmsManager:
         self.cpWaiting = -1
         self.cpSince = 0
         self.noIndications = False
+        self.cpTimeouts = 0
         self.controlRequested = False
         self.notPermittedRetries = 0
         self.resumeTried = False
@@ -943,6 +944,7 @@ class FtmsManager:
     def buildSetupQueue(self):
         self.queue = []
         self.noIndications = False
+        self.cpTimeouts = 0
         if self.profileLevel == 3:
             self.queue.append([OP_READ, self.featUuid, None, 0])
             self.queue.append([OP_READ, self.speedRangeUuid, None, 0])
@@ -997,7 +999,9 @@ class FtmsManager:
                 return
             op = self.cpWaiting
             self.cpWaiting = -1
-            self.noIndications = True
+            self.cpTimeouts += 1
+            if self.cpTimeouts >= 2:
+                self.noIndications = True
             self.onCpResult(op, -1)
         while len(self.queue) > 0:
             nxt = self.queue[0]
@@ -1225,6 +1229,8 @@ class FtmsManager:
             Ftms.parseTreadmillData(value, self.st, self.cfg.mphMode)
         elif u == self.cpUuid:
             if len(value) >= 3 and value[0] == Ftms.CP_RESPONSE:
+                self.cpTimeouts = 0
+                self.noIndications = False
                 self.onCpResult(value[1], value[2])
                 self.pump()
         elif u == self.statusUuid:

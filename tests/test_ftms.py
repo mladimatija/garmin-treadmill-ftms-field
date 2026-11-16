@@ -712,6 +712,24 @@ class TestSessions(unittest.TestCase):
         self.assertEqual(bike.pair_attempts, 2)
         self.assertEqual(len(w.mgr.excluded), 1)
 
+    def test_one_lost_response_keeps_waiting_for_responses(self):
+        m = sim.FakeTreadmill(lost_responses=1)
+        w, m = self.gym(machine=m, workout=sim.interval_workout(True))
+        self.warm_up_and_start(w, m)
+        w.run(30)
+        self.assertFalse(w.mgr.noIndications)
+        self.assertAlmostEqual(m.speed, 12.0, places=1)
+        self.assertEqual(w.follower.modeText(), "AUTO")
+
+    def test_responses_after_blind_mode_are_waited_for_again(self):
+        m = sim.FakeTreadmill(lost_responses=2)       # control request and first speed unanswered
+        w, m = self.gym(machine=m, workout=sim.interval_workout(True))
+        self.warm_up_and_start(w, m)
+        w.run(30)
+        self.assertFalse(w.mgr.noIndications)
+        self.assertAlmostEqual(m.speed, 12.0, places=1)
+        self.assertAlmostEqual(m.incline, 1.0, places=1)
+
 
 if __name__ == "__main__":
     unittest.main()

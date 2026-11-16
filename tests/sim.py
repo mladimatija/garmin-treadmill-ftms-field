@@ -41,7 +41,7 @@ class FakeTreadmill:
                  control_allowed=True, accel=1.5, incline_rate=0.6, incline_step=0.0,
                  refuse_speed=False, discovery_delay=0, safety_instant=True,
                  advert="uuids", ftms=True, name_visible=True, connectable=True,
-                 service_delay=0):
+                 lost_responses=0, service_delay=0):
         self.name = name
         self.rssi = rssi
         self.target_bits = target_bits
@@ -64,6 +64,7 @@ class FakeTreadmill:
         self.ftms = ftms                    # False: some other Bluetooth device (no FTMS service)
         self.name_visible = name_visible    # False: name only in the scan response, which Garmin never sees
         self.connectable = connectable      # False: connection attempts never complete
+        self.lost_responses = lost_responses  # this many Control Point responses never arrive
         self.service_delay = service_delay  # ms after connecting before even the service appears
         self.pair_attempts = 0
         self.chars = chars or ["2acc", "2acd", "2ad4", "2ad5", "2ad9", "2ada"]
@@ -174,7 +175,9 @@ class FakeTreadmill:
             self.target_speed = 0.0
         else:
             res = Ftms.RES_NOT_SUPPORTED
-        if self.indications and "2ad9" in self.notify:
+        if self.lost_responses > 0:
+            self.lost_responses -= 1
+        elif self.indications and "2ad9" in self.notify:
             EV.after(80, lambda: self.device and self.connected and
                      self.device.notify("2ad9", bytes([0x80, op, res])))
 
