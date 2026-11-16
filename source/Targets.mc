@@ -50,20 +50,42 @@ module Targets {
 
     // The number written just before the first occurrence of unit ("13.3 km/h" -> 13.3).
     // Accepts a decimal comma and a leading minus. Spaces between number and unit are allowed.
+    // A range gives its middle: "12-13 km/h" -> 12.5, "5-7%" -> 6. A dash counts as a range
+    // only when a digit touches it ("5-7"), so "Step 3 -1%" is still minus one.
     function numberBefore(t, unit) {
         var idx = t.find(unit);
         if (idx == null) {
             return null;
         }
         var chars = t.toCharArray();
-        var end = idx;
+        var n = numberEndingAt(chars, idx);
+        if (n == null) {
+            return null;
+        }
+        var start = n[0];
+        var v = n[1];
+        if (start > 0 && chars[start - 1].toNumber() == C_MINUS) {
+            if (start > 1 && isDigit(chars[start - 2].toNumber())) {
+                var lo = numberEndingAt(chars, start - 1);
+                if (lo != null) {
+                    return (lo[1] + v) / 2.0;
+                }
+            }
+            v = -v;
+        }
+        return v;
+    }
+
+    // The unsigned number that ends at chars[end - 1] (spaces before end skipped):
+    // [index of its first digit, value], or null.
+    function numberEndingAt(chars, end) {
         while (end > 0 && chars[end - 1].toNumber() == C_SPACE) {
             end -= 1;
         }
         var start = end;
         while (start > 0) {
             var ch = chars[start - 1].toNumber();
-            if ((ch >= C_0 && ch <= C_9) || ch == C_DOT || ch == C_COMMA) {
+            if (isDigit(ch) || ch == C_DOT || ch == C_COMMA) {
                 start -= 1;
             } else {
                 break;
@@ -87,10 +109,7 @@ module Targets {
         if (v == null) {
             return null;
         }
-        if (start > 0 && chars[start - 1].toNumber() == C_MINUS) {
-            v = -v;
-        }
-        return v;
+        return [start, v];
     }
 
     function isDigit(c) {

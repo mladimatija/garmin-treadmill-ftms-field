@@ -125,6 +125,20 @@ class TestTargets(unittest.TestCase):
         self.assertIsNone(Targets.speedFromText("0 km/h"))
         self.assertAlmostEqual(Targets.speedFromText("(2 km, 13.3 km/h)"), 13.3)
 
+    def test_note_ranges_give_the_middle(self):
+        self.assertAlmostEqual(Targets.speedFromText("Treadmill 12-13 km/h"), 12.5)
+        self.assertAlmostEqual(Targets.speedFromText("12,5-13,5 kph"), 13.0)
+        self.assertAlmostEqual(Targets.inclineFromText("incline 5-7%"), 6.0)
+        self.assertAlmostEqual(Targets.inclineFromText("4-5 % incline, 12 km/h"), 4.5)
+        self.assertAlmostEqual(Targets.speedFromText("4-5 % incline, 12 km/h"), 12.0)
+        # a minus that no digit touches is still a sign
+        self.assertAlmostEqual(Targets.inclineFromText("Step 3 -1% incline"), -1.0)
+        self.assertAlmostEqual(Targets.inclineFromText("12 km/h, -1% incline"), -1.0)
+        self.assertAlmostEqual(Targets.inclineFromText("-1%"), -1.0)
+        # spaced dashes are text, not ranges ("Rep 2 - 15 km/h")
+        self.assertAlmostEqual(Targets.speedFromText("Rep 2 - 15 km/h"), 15.0)
+        self.assertIsNone(Targets.inclineFromText("HR 80-90%"))     # 85 % is no incline
+
     def test_pace_targets_give_the_table_speeds(self):
         st = L.TreadmillState()
         for fast, slow, kmh in (("4:55", "5:05", 12.0), ("4:28", "4:34", 13.3), ("5:50", "6:10", 10.0)):

@@ -191,7 +191,7 @@ Not supported:
 | Setting | Default | What it does |
 |---|---|---|
 | Control speed and incline from the workout | On | Off = read-only, never sends a command |
-| Read "km/h" and "% incline" from step notes | On | e.g. `Treadmill 12.0 km/h, 1% incline`, `12,5 kph @ 2 %`, `7.5 mph` |
+| Read "km/h" and "% incline" from step notes | On | e.g. `Treadmill 12.0 km/h, 1% incline`, `12,5 kph @ 2 %`, `7.5 mph`. A range gives its middle: `12-13 km/h` → 12.5 |
 | Otherwise use the middle of the pace target | On | 4:55–5:05 → 12.0, 4:28–4:34 → 13.3, 5:50–6:10 → 10.0 km/h |
 | Incline when a step gives none | 1.0 % | Only for steps that set a speed. −1 = leave the incline as it is |
 | Never set speed above | 16 km/h | Hard limit on every command |

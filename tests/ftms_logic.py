@@ -272,13 +272,26 @@ class Targets:
         if idx < 0:
             return None
         chars = t
-        end = idx
+        n = Targets.numberEndingAt(chars, idx)
+        if n is None:
+            return None
+        start, v = n
+        if start > 0 and ord(chars[start - 1]) == 45:
+            if start > 1 and Targets.isDigit(ord(chars[start - 2])):
+                lo = Targets.numberEndingAt(chars, start - 1)
+                if lo is not None:
+                    return (lo[1] + v) / 2.0
+            v = -v
+        return v
+
+    @staticmethod
+    def numberEndingAt(chars, end):
         while end > 0 and ord(chars[end - 1]) == 32:
             end -= 1
         start = end
         while start > 0:
             ch = ord(chars[start - 1])
-            if (48 <= ch <= 57) or ch == 46 or ch == 44:
+            if Targets.isDigit(ch) or ch == 46 or ch == 44:
                 start -= 1
             else:
                 break
@@ -293,9 +306,7 @@ class Targets:
             v = float(s)            # Monkey C String.toFloat() returns null on garbage
         except ValueError:
             return None
-        if start > 0 and ord(chars[start - 1]) == 45:
-            v = -v
-        return v
+        return [start, v]
 
     @staticmethod
     def isDigit(c):
