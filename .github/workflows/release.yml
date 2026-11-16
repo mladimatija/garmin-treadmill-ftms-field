@@ -11,14 +11,8 @@ concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
 
-env:
-  CONNECTIQ_SDK_VERSION: 9.3.0
-  SDK_MANAGER_VERSION: 0.8.4
-  SDK_MANAGER_SHA256: 5d57b8f9cfcd02d3b3f48e19d6daca0480e4c6f627926f15d8617ef8a6f57e0b
-  # MD5 of the Connect IQ SDK licence agreement that was read and accepted. When Garmin changes
-  # the agreement the build stops at "accept": read the new one with
-  # `connect-iq-sdk-manager agreement view` and update this hash.
-  CONNECTIQ_AGREEMENT_HASH: CC737BBBA104D7740D5BBCF27D0F6382
+# The SDK version and the accepted SDK licence agreement are pinned in
+# .github/actions/setup-connectiq/action.yml.
 
 jobs:
   test:
@@ -57,25 +51,10 @@ jobs:
           distribution: temurin
           java-version: "21"
 
-      - name: Install Connect IQ SDK Manager CLI
-        working-directory: ${{ runner.temp }}
-        run: |
-          archive="connect-iq-sdk-manager-cli_${SDK_MANAGER_VERSION}_Linux_x86_64.tar.gz"
-          curl -fsSLO "https://github.com/lindell/connect-iq-sdk-manager-cli/releases/download/v${SDK_MANAGER_VERSION}/${archive}"
-          echo "${SDK_MANAGER_SHA256}  ${archive}" | sha256sum -c -
-          tar -xzf "$archive" connect-iq-sdk-manager
-          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
-
-      - name: Install Connect IQ SDK and device files
-        env:
-          GARMIN_USERNAME: ${{ secrets.GARMIN_USERNAME }}
-          GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
-        run: |
-          connect-iq-sdk-manager agreement accept --agreement-hash "$CONNECTIQ_AGREEMENT_HASH"
-          connect-iq-sdk-manager login
-          connect-iq-sdk-manager sdk set "$CONNECTIQ_SDK_VERSION"
-          connect-iq-sdk-manager device download --manifest manifest.xml
-          connect-iq-sdk-manager sdk current-path --bin >> "$GITHUB_PATH"
+      - uses: ./.github/actions/setup-connectiq
+        with:
+          garmin-username: ${{ secrets.GARMIN_USERNAME }}
+          garmin-password: ${{ secrets.GARMIN_PASSWORD }}
 
       - name: Write signing key
         env:

@@ -362,6 +362,10 @@ line-for-line close to the Monkey C, so change both together. `tests/sim.py` add
 Bluetooth stack, simulated treadmills with different quirks and a watch running a workout, so whole
 sessions can be tested.
 
+CI also compiles the field for one watch (fēnix 7) on every push and pull request, so a Monkey C
+error shows up before a release. That job needs the `GARMIN_USERNAME` and `GARMIN_PASSWORD` secrets
+(see [Releasing](#releasing)) and is skipped without them, e.g. on forks.
+
 | File | Role |
 |---|---|
 | `source/FtmsTreadmillApp.mc` | App entry: settings, Bluetooth delegate, view |
@@ -397,8 +401,9 @@ The workflow needs these repository secrets:
 | `CONNECTIQ_DEVELOPER_KEY` | The developer key, base64-encoded: `base64 -i ~/developer_key.der` |
 | `GARMIN_USERNAME`, `GARMIN_PASSWORD` | A Garmin account to download the SDK and device files. It must not use two-step verification. |
 
-The SDK version and the accepted SDK licence agreement are pinned at the top of the workflow. When
-Garmin changes the agreement, the build stops until the new hash is put there.
+The SDK version and the accepted SDK licence agreement are pinned in
+[`.github/actions/setup-connectiq/action.yml`](.github/actions/setup-connectiq/action.yml), which both
+workflows use. When Garmin changes the agreement, the build stops until the new hash is put there.
 
 ## Known limitations
 
