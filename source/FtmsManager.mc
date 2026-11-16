@@ -76,6 +76,7 @@ class FtmsManager extends Ble.BleDelegate {
     hidden var cpSince = 0;
     hidden var noIndications = false;
     hidden var cpTimeouts = 0;   // Control Point responses missed in a row
+    hidden var setupProblem = "";  // kept as the problem once the link is ready
     hidden var controlRequested = false;
     hidden var notPermittedRetries = 0;
     hidden var resumeTried = false;
@@ -613,6 +614,7 @@ class FtmsManager extends Ble.BleDelegate {
         queue = [];
         noIndications = false;
         cpTimeouts = 0;
+        setupProblem = "";
         if (profileLevel == 3) {
             queue.add([OP_READ, featUuid, null, 0]);
             queue.add([OP_READ, speedRangeUuid, null, 0]);
@@ -723,7 +725,7 @@ class FtmsManager extends Ble.BleDelegate {
             }
         }
         if (link == LINK_SETUP) {
-            problem = "";
+            problem = setupProblem;
             setLink(LINK_READY);
             if (follower != null) {
                 follower.onLinkReady();
@@ -755,11 +757,7 @@ class FtmsManager extends Ble.BleDelegate {
             }
         } catch (e) {
             cpWaiting = -1;
-            op[3] = op[3] + 1;
-            if (op[3] < 3) {
-                var q = [op];
-                q.addAll(queue);
-                queue = q;
+            if (requeue(op)) {
                 return 2;
             }
             if (op[0] == OP_CP) {
@@ -771,6 +769,18 @@ class FtmsManager extends Ble.BleDelegate {
         busyOp = op;
         busySince = Sys.getTimer();
         return 1;
+    }
+
+    // Puts op back at the head of the queue for another try; false after the third failure.
+    hidden function requeue(op) {
+        op[3] = op[3] + 1;
+        if (op[3] >= 3) {
+            return false;
+        }
+        var q = [op];
+        q.addAll(queue);
+        queue = q;
+        return true;
     }
 
     // ------------------------------------------------------------------ control point
@@ -997,8 +1007,13 @@ class FtmsManager extends Ble.BleDelegate {
     }
 
     function onDescriptorWrite(desc, status) {
+        var op = busyOp;
         busy = false;
         busyOp = null;
+        if (status != Ble.STATUS_SUCCESS && op != null && op[0] == OP_CCCD && !requeue(op)) {
+            setupProblem = "Notify failed";    // the machine's data or status won't arrive
+            problem = setupProblem;
+        }
         pump();
     }
 

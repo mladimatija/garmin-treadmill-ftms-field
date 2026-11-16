@@ -41,7 +41,7 @@ class FakeTreadmill:
                  control_allowed=True, accel=1.5, incline_rate=0.6, incline_step=0.0,
                  refuse_speed=False, discovery_delay=0, safety_instant=True,
                  advert="uuids", ftms=True, name_visible=True, connectable=True,
-                 lost_responses=0, service_delay=0):
+                 cccd_failures=0, lost_responses=0, service_delay=0):
         self.name = name
         self.rssi = rssi
         self.target_bits = target_bits
@@ -64,6 +64,7 @@ class FakeTreadmill:
         self.ftms = ftms                    # False: some other Bluetooth device (no FTMS service)
         self.name_visible = name_visible    # False: name only in the scan response, which Garmin never sees
         self.connectable = connectable      # False: connection attempts never complete
+        self.cccd_failures = cccd_failures  # this many notification set-ups fail before they work
         self.lost_responses = lost_responses  # this many Control Point responses never arrive
         self.service_delay = service_delay  # ms after connecting before even the service appears
         self.pair_attempts = 0
@@ -251,6 +252,10 @@ class FakeDesc:
 
         def done():
             ble.outstanding = False
+            if m.cccd_failures > 0:
+                m.cccd_failures -= 1
+                ble.delegate.onDescriptorWrite(self, 2)
+                return
             if value[0] in (1, 2):
                 m.notify.add(self.ch.uuid)
             ble.delegate.onDescriptorWrite(self, L.STATUS_SUCCESS)

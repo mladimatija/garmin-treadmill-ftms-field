@@ -623,6 +623,7 @@ class FtmsManager:
         self.cpSince = 0
         self.noIndications = False
         self.cpTimeouts = 0
+        self.setupProblem = ""
         self.controlRequested = False
         self.notPermittedRetries = 0
         self.resumeTried = False
@@ -945,6 +946,7 @@ class FtmsManager:
         self.queue = []
         self.noIndications = False
         self.cpTimeouts = 0
+        self.setupProblem = ""
         if self.profileLevel == 3:
             self.queue.append([OP_READ, self.featUuid, None, 0])
             self.queue.append([OP_READ, self.speedRangeUuid, None, 0])
@@ -1010,7 +1012,7 @@ class FtmsManager:
             if r == 1 or r == 2:
                 return
         if self.link == LINK_SETUP:
-            self.problem = ""
+            self.problem = self.setupProblem
             self.setLink(LINK_READY)
             if self.follower is not None:
                 self.follower.onLinkReady()
@@ -1034,9 +1036,7 @@ class FtmsManager:
                     self.cpSince = get_timer()
         except BleException:
             self.cpWaiting = -1
-            op[3] = op[3] + 1
-            if op[3] < 3:
-                self.queue = [op] + self.queue
+            if self.requeue(op):
                 return 2
             if op[0] == OP_CP:
                 self.onCpResult(op[2][0], -2)
@@ -1045,6 +1045,13 @@ class FtmsManager:
         self.busyOp = op
         self.busySince = get_timer()
         return 1
+
+    def requeue(self, op):
+        op[3] = op[3] + 1
+        if op[3] >= 3:
+            return False
+        self.queue = [op] + self.queue
+        return True
 
     # control point
     def onCpResult(self, op, result):
@@ -1217,8 +1224,12 @@ class FtmsManager:
         self.pump()
 
     def onDescriptorWrite(self, desc, status):
+        op = self.busyOp
         self.busy = False
         self.busyOp = None
+        if status != STATUS_SUCCESS and op is not None and op[0] == OP_CCCD and not self.requeue(op):
+            self.setupProblem = "Notify failed"
+            self.problem = self.setupProblem
         self.pump()
 
     def onCharacteristicChanged(self, ch, value):

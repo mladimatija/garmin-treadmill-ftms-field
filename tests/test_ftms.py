@@ -739,6 +739,22 @@ class TestSessions(unittest.TestCase):
         w.run(15)
         self.assertEqual(w.mgr.candidates, [])
 
+    def test_failed_notification_setup_is_retried(self):
+        m = sim.FakeTreadmill(cccd_failures=2)
+        w, m = self.gym(machine=m)
+        w.run(12)
+        self.assertTrue(w.mgr.isReady(), w.mgr.statusText())
+        self.assertTrue(w.st.isFresh())
+        self.assertIn("2acd", m.notify)
+
+    def test_notification_setup_that_keeps_failing_is_reported(self):
+        m = sim.FakeTreadmill(cccd_failures=99)
+        w, m = self.gym(machine=m, others=False)
+        w.run(12)
+        self.assertTrue(w.mgr.isReady())
+        self.assertFalse(w.st.isFresh())
+        self.assertEqual(w.mgr.problem, "Notify failed")
+
 
 if __name__ == "__main__":
     unittest.main()

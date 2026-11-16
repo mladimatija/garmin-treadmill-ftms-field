@@ -314,6 +314,7 @@ the next person with the same machine.
 | Stays on `No FTMS (n seen)` after several `Checking` tries | It tried the six strongest devices and none was a treadmill. Make sure the console's pairing screen is open and nothing else is connected to it, then stop and restart the activity to search again. |
 | `BLE busy` | Too many Bluetooth sensors or apps on the watch; remove another Connect IQ Bluetooth field from the screen. |
 | Speed is off by a factor of 1.6 | Turn on *Treadmill works in mph*. |
+| `No data` with `Notify failed` below | The treadmill turned down the request for its live data three times. Stop and restart the activity; if it keeps happening, restart the console's Bluetooth. |
 | `REFUSED` with `Speed Refused` / `Incline Refused` | Some consoles want an FTMS start first; the field already sends one per step while the belt is moving. If the console still refuses, set that value by hand. |
 | The field shows `IQ!` | The field crashed. Please [open an issue](https://github.com/mladimatija/garmin-treadmill-ftms-field/issues) with `GARMIN/APPS/LOGS/CIQ_LOG.YML` from the watch. |
 
