@@ -388,10 +388,12 @@ profile, the field retries with a smaller one (data + control + status, then dat
 
 Pushing a tag `vX.Y.Z` runs [`release.yml`](.github/workflows/release.yml). It runs the tests, builds
 every watch in `manifest.xml` and publishes a GitHub release with all builds in one zip and its
-SHA-256. The tag must match the `version` in `manifest.xml`:
+SHA-256. The tag must match the `version` in `manifest.xml`, and the field name (`AppName` in
+`resources/strings/strings.xml`) ends with the same version so a sideloaded build can be told apart
+on the watch (a test checks this):
 
 ```sh
-# bump version="X.Y.Z" in manifest.xml, commit, then
+# bump version="X.Y.Z" in manifest.xml and AppName in resources/strings/strings.xml, commit, then
 git tag vX.Y.Z
 git push origin vX.Y.Z
 ```

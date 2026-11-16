@@ -1,6 +1,8 @@
 """
 Run from the repository root:  python3 -m unittest discover -s tests -v
 """
+import pathlib
+import re
 import unittest
 
 import ftms_logic as L
@@ -790,6 +792,18 @@ class TestSessions(unittest.TestCase):
         guess = sim.ScanResult(sim.FakeTreadmill(name="MATRIX-1"))
         w.mgr.candidates = [[probe, -50, "", 0], [guess, -60, "MATRIX-1", 1]]
         self.assertEqual(w.mgr.statusText(), "Found 1")
+
+
+class TestVersion(unittest.TestCase):
+    def test_field_name_shows_manifest_version(self):
+        # The version in the field's name tells a sideloaded build apart from the old one.
+        root = pathlib.Path(__file__).resolve().parent.parent
+        manifest = (root / "manifest.xml").read_text()
+        strings = (root / "resources/strings/strings.xml").read_text()
+        version = re.search(r'<iq:application [^>]*version="([^"]+)"', manifest).group(1)
+        name = re.search(r'<string id="AppName">([^<]*)</string>', strings).group(1)
+        self.assertTrue(name.endswith(" " + version),
+                        f'AppName "{name}" should end with the manifest version {version}')
 
 
 if __name__ == "__main__":
