@@ -1,5 +1,5 @@
 <strings>
-    <string id="AppName">FTMS Treadmill 1.2.1</string>
+    <string id="AppName">FTMS Treadmill 1.2.2</string>
 
     <!-- settings -->
     <string id="NameFilterTitle">Only treadmills whose name contains (empty = closest)</string>
