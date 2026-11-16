@@ -349,14 +349,16 @@ class FtmsManager extends Ble.BleDelegate {
     // Name hints for treadmills whose advertising doesn't show FTMS at all. Such a device is
     // only tried when nothing advertises FTMS, and dropped if it turns out to have no FTMS.
     // Matrix commercial consoles advertise their serial number, which starts with "CTM".
+    const TREADMILL_HINTS = ["tread", "matrix", "ftms", "jht", "horizon", "technogym", "precor",
+        "life fitness", "lifefitness", "woodway", "nordictrack", "proform", "sole ", "kingsmith",
+        "walkingpad", "echelon"];
+
     hidden function looksLikeTreadmill(lname) {
         if (lname.find("ctm") == 0) {
             return true;
         }
-        var hints = ["tread", "matrix", "ftms", "jht", "horizon", "technogym", "precor", "life fitness",
-            "lifefitness", "woodway", "nordictrack", "proform", "sole ", "kingsmith", "walkingpad", "echelon"];
-        for (var i = 0; i < hints.size(); i++) {
-            if (lname.find(hints[i]) != null) {
+        for (var i = 0; i < TREADMILL_HINTS.size(); i++) {
+            if (lname.find(TREADMILL_HINTS[i]) != null) {
                 return true;
             }
         }
