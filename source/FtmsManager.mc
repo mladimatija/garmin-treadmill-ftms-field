@@ -210,11 +210,11 @@ class FtmsManager extends Ble.BleDelegate {
                 startScan();       // no onProfileRegister callback on some firmware: just try
             }
         } else if (link == LINK_SCANNING) {
-            if (candidates.size() > 0 && now - scanStart > 4000) {
-                connectBest();
-            } else if (now - scanStart > 30000) {
-                setScan(false);    // restart the scan now and then, results go stale
+            if (now - scanStart > 30000) {
+                setScan(false);    // restart the scan now and then: drops devices no longer heard
                 startScan();
+            } else if (candidates.size() > 0 && now - scanStart > 4000) {
+                connectBest();
             }
         } else if (link == LINK_CONNECTING) {
             if (device != null && device.isConnected()) {

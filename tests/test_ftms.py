@@ -730,6 +730,15 @@ class TestSessions(unittest.TestCase):
         self.assertAlmostEqual(m.speed, 12.0, places=1)
         self.assertAlmostEqual(m.incline, 1.0, places=1)
 
+    def test_scan_restart_drops_a_treadmill_no_longer_heard(self):
+        far = sim.FakeTreadmill(name="MATRIX-3", rssi=-95)
+        w = sim.Watch([far])
+        w.run(20)
+        self.assertEqual(w.mgr.statusText(), "Move closer")
+        w.machines.remove(far)                        # walked away from it
+        w.run(15)
+        self.assertEqual(w.mgr.candidates, [])
+
 
 if __name__ == "__main__":
     unittest.main()

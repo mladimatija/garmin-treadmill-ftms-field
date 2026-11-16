@@ -712,11 +712,11 @@ class FtmsManager:
             if now - self.linkSince > 6000:
                 self.startScan()
         elif self.link == LINK_SCANNING:
-            if len(self.candidates) > 0 and now - self.scanStart > 4000:
-                self.connectBest()
-            elif now - self.scanStart > 30000:
+            if now - self.scanStart > 30000:
                 self.setScan(False)
                 self.startScan()
+            elif len(self.candidates) > 0 and now - self.scanStart > 4000:
+                self.connectBest()
         elif self.link == LINK_CONNECTING:
             if self.device is not None and self.device.isConnected():
                 self.onLinkUp()
