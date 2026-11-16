@@ -762,6 +762,27 @@ class TestSessions(unittest.TestCase):
         self.assertGreaterEqual(m.pair_attempts, 2)
         self.assertEqual(w.mgr.excluded, [])
 
+    def test_refusal_is_cleared_at_the_next_step(self):
+        m = sim.FakeTreadmill(refuse_speed_above=13.0, status_on_target=False)
+        w, m = self.gym(machine=m, workout=sim.interval_workout(True))
+        self.warm_up_and_start(w, m)
+        w.run(15 * 60 + 60)                           # into the first 13.3 km/h run
+        self.assertEqual(w.follower.modeText(), "REFUSED")
+        m.console_stop()                              # belt stopped: the next step is not sent yet
+        w.run(20)
+        w.lap()
+        w.run(2)
+        self.assertEqual(w.follower.modeText(), "AUTO")
+
+    def test_speed_the_treadmill_cannot_set_is_reported(self):
+        m = sim.FakeTreadmill(target_bits=0x02)       # Feature: incline only
+        w, m = self.gym(machine=m, workout=sim.interval_workout(True))
+        self.warm_up_and_start(w, m)
+        w.run(10)
+        self.assertEqual(w.follower.modeText(), "REFUSED")
+        self.assertEqual(w.follower.refusedText(), "Speed Not supported")
+        self.assertAlmostEqual(m.incline, 1.0, places=1)
+
 
 if __name__ == "__main__":
     unittest.main()

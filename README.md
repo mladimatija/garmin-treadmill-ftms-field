@@ -251,7 +251,7 @@ Not supported:
 | `AUTO` (green) | Following the workout |
 | `OPEN` | The current step has no speed target (e.g. a lap-button rest); the belt is left alone |
 | `MANUAL` (orange) | You changed the console; automatic control resumes at the next step |
-| `REFUSED` (orange) | The treadmill turned down this step's speed or incline; the bottom line says which |
+| `REFUSED` (orange) | The treadmill turned down this step's speed or incline, or can't set it at all; the bottom line says which |
 | `READ ONLY` | The treadmill doesn't accept commands, or control is turned off in the settings |
 | `NO CONTROL` (orange) | The treadmill refused control (another app connected?); retried at every new step |
 | `SAFETY KEY` (red) | The safety key was pulled |

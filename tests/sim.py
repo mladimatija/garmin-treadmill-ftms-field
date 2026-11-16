@@ -41,7 +41,7 @@ class FakeTreadmill:
                  control_allowed=True, accel=1.5, incline_rate=0.6, incline_step=0.0,
                  refuse_speed=False, discovery_delay=0, safety_instant=True,
                  advert="uuids", ftms=True, name_visible=True, connectable=True, rejects=False,
-                 cccd_failures=0, lost_responses=0, service_delay=0):
+                 cccd_failures=0, lost_responses=0, service_delay=0, refuse_speed_above=None):
         self.name = name
         self.rssi = rssi
         self.target_bits = target_bits
@@ -68,6 +68,7 @@ class FakeTreadmill:
         self.cccd_failures = cccd_failures  # this many notification set-ups fail before they work
         self.lost_responses = lost_responses  # this many Control Point responses never arrive
         self.service_delay = service_delay  # ms after connecting before even the service appears
+        self.refuse_speed_above = refuse_speed_above  # "operation failed" for faster speeds
         self.pair_attempts = 0
         self.chars = chars or ["2acc", "2acd", "2ad4", "2ad5", "2ad9", "2ada"]
         self.connected = False
@@ -152,6 +153,8 @@ class FakeTreadmill:
             if not (self.target_bits & 1):
                 res = Ftms.RES_NOT_SUPPORTED
             elif self.refuse_speed:
+                res = Ftms.RES_FAILED
+            elif self.refuse_speed_above is not None and Ftms.u16(data, 1) / 100.0 > self.refuse_speed_above:
                 res = Ftms.RES_FAILED
             elif self.needs_ftms_start and not self.ftms_started:
                 res = Ftms.RES_FAILED

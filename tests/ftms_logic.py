@@ -1439,11 +1439,18 @@ class WorkoutFollower:
         self.cmdIncline = None
         self.speedDev = 0
         self.inclineDev = 0
+        self.speedProblem = ""
+        self.inclineProblem = ""
         self.pendingApply = True
         self.mgr.clearControlDenied()
 
     def apply(self, now):
         self.pendingApply = False
+        notSupported = Ftms.resultText(Ftms.RES_NOT_SUPPORTED)
+        if self.targetSpeed is not None and not self.mgr.speedSupported:
+            self.speedProblem = "Speed " + notSupported
+        if self.targetIncline is not None and not self.mgr.inclineSupported:
+            self.inclineProblem = "Incline " + notSupported
         if self.targetSpeed is not None and not self.overrideSpeed and self.mgr.speedSupported:
             if self.mgr.requestSpeed(self.targetSpeed):
                 self.cmdSpeed = self.targetSpeed

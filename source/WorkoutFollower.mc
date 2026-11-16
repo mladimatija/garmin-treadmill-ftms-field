@@ -263,12 +263,22 @@ class WorkoutFollower {
         cmdIncline = null;
         speedDev = 0;
         inclineDev = 0;
+        speedProblem = "";                 // a refusal belongs to the step it was sent for
+        inclineProblem = "";
         pendingApply = true;
         mgr.clearControlDenied();
     }
 
     hidden function apply(now) {
         pendingApply = false;
+        // Already known not to work (Feature bits or an earlier answer): say so instead of AUTO.
+        var notSupported = Ftms.resultText(Ftms.RES_NOT_SUPPORTED);
+        if (targetSpeed != null && !mgr.speedSupported) {
+            speedProblem = "Speed " + notSupported;
+        }
+        if (targetIncline != null && !mgr.inclineSupported) {
+            inclineProblem = "Incline " + notSupported;
+        }
         if (targetSpeed != null && !overrideSpeed && mgr.speedSupported) {
             if (mgr.requestSpeed(targetSpeed)) {
                 cmdSpeed = targetSpeed;
